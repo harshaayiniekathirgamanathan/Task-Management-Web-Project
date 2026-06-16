@@ -7,6 +7,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const http = require('http');
 const { initSocket } = require('./sockets/io');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 const app = express();
 
@@ -24,6 +26,12 @@ app.use(express.json());
 
 // Let the server read cookies (used later for the refresh token)
 app.use(cookieParser());
+
+// Interactive API docs (the web page)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// The raw spec as JSON
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
 
 // Health check — a simple way to confirm the server is alive
 app.get('/health', (req, res) => {
