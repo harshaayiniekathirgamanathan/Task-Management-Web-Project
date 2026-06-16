@@ -5,6 +5,8 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const http = require('http');
+const { initSocket } = require('./sockets/io');
 
 const app = express();
 
@@ -29,7 +31,10 @@ app.get('/health', (req, res) => {
 });
 
 // Start listening for requests
+const server = http.createServer(app); // wrap the Express app
+initSocket(server);                     // attach Socket.IO to it
+
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
