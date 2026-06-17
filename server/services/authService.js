@@ -42,7 +42,40 @@ const getUserById = async (id) => {
   return user;
 };
 
+const changePassword = async (userId, currentPassword, newPassword) => {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error || !user) {
+    throw { status: 404, message: 'User not found' };
+  }
+
+  if (!user.must_reset_password) {
+  const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+
+  if (!isMatch) {
+    throw { status: 400, message: 'Invalid current password' };
+  }
+}
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ password_hash: hashedNewPassword, must_reset_password: false })
+    .eq('id', userId);
+
+  if (updateError) {
+    throw { status: 500, message: 'Failed to update password' };
+  }
+};
+
 module.exports = {
   loginUser,
-  getUserById
+  getUserById,
+  changePassword
 };

@@ -57,8 +57,24 @@ const logout = (req, res) => {
   res.status(204).end();
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+    
+    await authService.changePassword(userId, currentPassword, newPassword);
+    
+    res.json({ message: 'Password updated' });
+  } catch (error) {
+    const status = error.status || 500;
+    const message = error.message || 'Internal server error';
+    res.status(status).json({ code: status, message });
+  }
+};
+
 module.exports = {
   login,
   refresh,
-  logout
+  logout,
+  changePassword
 };
