@@ -52,7 +52,13 @@ const refresh = async (req, res) => {
   }
 };
 
+const logout = (req, res) => {
+  res.clearCookie('refreshToken');
+  res.status(204).end();
+};
+
 module.exports = {
   login,
-  refresh
+  refresh,
+  logout
 };
