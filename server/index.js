@@ -6,9 +6,13 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const http = require('http');
+
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+
+// Routes
+const commentRoutes = require('./routes/commentRoutes');
 
 const app = express();
 
@@ -24,25 +28,33 @@ app.use(cors({
 // Let the server read JSON sent in request bodies
 app.use(express.json());
 
-// Let the server read cookies (used later for the refresh token)
+// Let the server read cookies
 app.use(cookieParser());
 
-// Interactive API docs (the web page)
+// Comment routes
+app.use('/api', commentRoutes);
+
+// Interactive API docs
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// The raw spec as JSON
-app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
+// Raw Swagger JSON
+app.get('/api/docs.json', (req, res) => {
+  res.json(swaggerSpec);
+});
 
-// Health check — a simple way to confirm the server is alive
+// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Start listening for requests
-const server = http.createServer(app); // wrap the Express app
-initSocket(server);                     // attach Socket.IO to it
+// Create HTTP server
+const server = http.createServer(app);
+
+// Attach Socket.IO
+initSocket(server);
 
 const PORT = process.env.PORT || 8000;
+
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
