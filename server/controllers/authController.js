@@ -1,5 +1,6 @@
 const authService = require('../services/authService');
-const { generateAccessToken } = require('../utils/jwt');
+const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
+const jwt = require('jsonwebtoken');
 
 const login = async (req, res) => {
   try {
@@ -7,10 +8,18 @@ const login = async (req, res) => {
     const user = await authService.loginUser(email, password);
     
     const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    const { password_hash, ...safeUser } = user;
     
     res.json({
       accessToken: token,
-      user
+      user: safeUser
     });
   } catch (error) {
     const status = error.status || 500;
@@ -19,6 +28,31 @@ const login = async (req, res) => {
   }
 };
 
+const refresh = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ code: 401, message: 'No refresh token provided' });
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const user = await authService.getUserById(decoded.id);
+    
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.json({ accessToken: newAccessToken });
+  } catch (error) {
+    return res.status(401).json({ code: 401, message: 'Invalid or expired refresh token' });
+  }
+};
+
 module.exports = {
-  login
+  login,
+  refresh
 };

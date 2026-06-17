@@ -28,6 +28,21 @@ const loginUser = async (email, password) => {
   return user;
 };
 
+const getUserById = async (id) => {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !user || user.is_active === false) {
+    throw { status: 401, message: 'User not found or inactive' };
+  }
+
+  return user;
+};
+
 module.exports = {
-  loginUser
+  loginUser,
+  getUserById
 };
