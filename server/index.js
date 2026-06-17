@@ -33,6 +33,11 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // The raw spec as JSON
 app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
 
+
+
+const projectRoutes = require('./routes/projectRoutes');
+app.use('/api/projects', projectRoutes);
+
 // Health check — a simple way to confirm the server is alive
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
