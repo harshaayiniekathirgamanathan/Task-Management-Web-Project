@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
-import AppRoutes from './routes/AppRoutes.jsx';
+import AppRoutes from './AppRoutes.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
