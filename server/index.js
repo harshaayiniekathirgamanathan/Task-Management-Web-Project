@@ -11,6 +11,7 @@ const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const labelRoutes = require('./routes/labelRoutes');
+const attachmentRoutes = require('./routes/attachmentRoutes');
 
 // Routes
 const commentRoutes = require('./routes/commentRoutes');
@@ -35,6 +36,8 @@ app.use(cookieParser());
 // Comment routes
 app.use('/api', commentRoutes);
 app.use('/api', labelRoutes);
+
+app.use('/api', attachmentRoutes);
 
 // Interactive API docs
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
