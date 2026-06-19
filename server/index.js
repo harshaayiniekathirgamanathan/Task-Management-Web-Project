@@ -12,6 +12,8 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const labelRoutes = require('./routes/labelRoutes');
 const attachmentRoutes = require('./routes/attachmentRoutes');
+// Notification service
+const { createNotification } = require('./services/notificationService');
 
 // Routes
 const commentRoutes = require('./routes/commentRoutes');
@@ -52,6 +54,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+
+
 // Create HTTP server
 const server = http.createServer(app);
 
@@ -60,6 +64,33 @@ initSocket(server);
 
 const PORT = process.env.PORT || 8000;
 
+// TEMPORARY ROUTE FOR TESTING NOTIFICATIONS
+// Remove this route after testing Step 4.7
+app.get('/test-notify', async (req, res) => {
+  try {
+    // Replace with a REAL user ID from your users table
+    const userId = 'PUT-REAL-USER-ID-HERE';
+
+    // Create and send a notification
+    const notification = await createNotification(
+      userId,
+      'admin_update',
+      'This is a test notification'
+    );
+
+    // Return the created notification
+    res.json(notification);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: 'Failed to create notification',
+    });
+  }
+});
+//temp route for testing notifications, remove after testing Step 4.7
+
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
