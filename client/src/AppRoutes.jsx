@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function Placeholder({ name }) {
@@ -8,17 +9,19 @@ function Placeholder({ name }) {
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Public */}
+      {/* Public - no navbar */}
       <Route path="/login" element={<Placeholder name="Login" />} />
 
-      {/* Any logged-in user */}
-      <Route path="/" element={<ProtectedRoute><Placeholder name="Dashboard" /></ProtectedRoute>} />
-      <Route path="/projects" element={<ProtectedRoute><Placeholder name="Projects" /></ProtectedRoute>} />
-      <Route path="/projects/:id" element={<ProtectedRoute><Placeholder name="Project detail" /></ProtectedRoute>} />
-      <Route path="/change-password" element={<ProtectedRoute><Placeholder name="Change password" /></ProtectedRoute>} />
+      {/* Pages WITH the navbar */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<ProtectedRoute><Placeholder name="Dashboard" /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute><Placeholder name="Projects" /></ProtectedRoute>} />
+        <Route path="/projects/:id" element={<ProtectedRoute><Placeholder name="Project detail" /></ProtectedRoute>} />
+        <Route path="/change-password" element={<ProtectedRoute><Placeholder name="Change password" /></ProtectedRoute>} />
 
-      {/* Admins only */}
-      <Route path="/users" element={<ProtectedRoute roles={['admin']}><Placeholder name="Users" /></ProtectedRoute>} />
+        {/* Admins only */}
+        <Route path="/users" element={<ProtectedRoute roles={['admin']}><Placeholder name="Users" /></ProtectedRoute>} />
+      </Route>
     </Routes>
   );
 }
