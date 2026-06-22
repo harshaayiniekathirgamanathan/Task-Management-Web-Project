@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Container, ButtonGroup, Button } from 'react-bootstrap';
+import TaskCard from '../components/TaskCard';
+
 
 const ProjectDetailPage = () => {
     // Read the project ID from the URL (e.g., /projects/123 -> id is 123)
@@ -37,6 +39,18 @@ const ProjectDetailPage = () => {
                 {view === 'board' ? (
                     <div className="p-5 border rounded bg-light text-center">
                         <h4>Board View Placeholder</h4>
+                        <TaskCard
+                            task={{
+                                id: 1,
+                                title: "Design Homepage",
+                                priority: "high",
+                                status: "todo",
+                                due_date: "2023-12-31",
+                                assignees: [{ id: 101, name: "John Doe" }],
+                                labels: [{ id: 201, name: "Frontend", color: "#0d6efd" }]
+                            }}
+                            onOpen={(t) => alert("Clicked on: " + t.title)}
+                        />
                         <p>Draggable task cards will go here.</p>
                     </div>
                 ) : (
