@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import ProtectedRoute from '../components/ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function Placeholder({ name }) {
   return <h2 style={{ padding: '2rem' }}>{name} page (coming soon)</h2>;
