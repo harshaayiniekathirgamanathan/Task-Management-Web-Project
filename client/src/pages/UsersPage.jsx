@@ -4,8 +4,9 @@ import {
     Table, Badge, Button,
     Form, InputGroup
 } from 'react-bootstrap';
+import UserFormModal from '../components/UserFormModal'; // <-- new import
 
-// --- Hard-coded fake users matching the API contract ---
+// Hard-coded fake users matching the API contract
 // Shape: { id, name, email, role, is_active, created_at }
 const FAKE_USERS = [
     {
@@ -34,24 +35,60 @@ const FAKE_USERS = [
     },
 ];
 
-// Helper — pick a badge colour based on the role string
 function roleBadgeVariant(role) {
     return role === 'admin' ? 'primary' : 'secondary';
 }
 
 export default function UsersPage() {
-    // Search and filter state — no filtering logic yet, just controlled inputs
+    // Search and filter state — no filtering logic yet
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
 
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null); // null = create mode
+
+    // Open in CREATE mode — no user pre-selected
+    function handleAddClick() {
+        setSelectedUser(null);
+        setShowModal(true);
+    }
+
+    // Open in EDIT mode — pass the clicked user row
+    function handleEditClick(user) {
+        setSelectedUser(user);
+        setShowModal(true);
+    }
+
+    // Called by the modal's Save button
+    function handleSave(formValues) {
+        // For now just log — will be replaced by an API call later
+        console.log('Saving user:', formValues);
+        // Modal closes itself after calling onSave
+    }
+
+    function handleClose() {
+        setShowModal(false);
+        setSelectedUser(null); // reset so next open starts fresh
+    }
+
     return (
         <Container className="py-4">
-            {/* Page heading */}
-            <h2 className="mb-4 fw-bold">Users</h2>
+            {/* Page heading + Add User button */}
+            <Row className="mb-4 align-items-center">
+                <Col>
+                    <h2 className="fw-bold mb-0">Users</h2>
+                </Col>
+                <Col xs="auto">
+                    {/* Opens the modal in create mode */}
+                    <Button variant="primary" onClick={handleAddClick}>
+                        + Add User
+                    </Button>
+                </Col>
+            </Row>
 
-            {/* ---- Search + Filter bar ---- */}
+            {/* Search + Filter bar */}
             <Row className="mb-3 g-2 align-items-end">
-                {/* Search box */}
                 <Col xs={12} md={6}>
                     <Form.Label className="fw-semibold">Search</Form.Label>
                     <InputGroup>
@@ -66,7 +103,6 @@ export default function UsersPage() {
                     </InputGroup>
                 </Col>
 
-                {/* Role filter */}
                 <Col xs={12} md={3}>
                     <Form.Label className="fw-semibold">Role</Form.Label>
                     <Form.Select
@@ -81,7 +117,7 @@ export default function UsersPage() {
                 </Col>
             </Row>
 
-            {/* ---- Users Table ---- */}
+            {/* Users Table */}
             <Table striped bordered hover responsive className="shadow-sm">
                 <thead className="table-dark">
                     <tr>
@@ -95,20 +131,15 @@ export default function UsersPage() {
                 <tbody>
                     {FAKE_USERS.map((u) => (
                         <tr key={u.id}>
-                            {/* Name */}
                             <td className="align-middle">{u.name}</td>
-
-                            {/* Email */}
                             <td className="align-middle">{u.email}</td>
 
-                            {/* Role — shown as a coloured Badge */}
                             <td className="align-middle">
                                 <Badge bg={roleBadgeVariant(u.role)} className="text-capitalize">
                                     {u.role}
                                 </Badge>
                             </td>
 
-                            {/* Active / Inactive status */}
                             <td className="align-middle">
                                 {u.is_active
                                     ? <Badge bg="success">Active</Badge>
@@ -116,20 +147,20 @@ export default function UsersPage() {
                                 }
                             </td>
 
-                            {/* Action buttons — no logic yet */}
                             <td className="align-middle">
+                                {/* Opens the modal pre-filled with this user's data */}
                                 <Button
                                     variant="outline-primary"
                                     size="sm"
                                     className="me-2"
-                                    onClick={() => { }} // wire up later
+                                    onClick={() => handleEditClick(u)}
                                 >
                                     Edit
                                 </Button>
                                 <Button
                                     variant="outline-danger"
                                     size="sm"
-                                    onClick={() => { }} // wire up later
+                                    onClick={() => { }} // wire up deactivate later
                                 >
                                     Deactivate
                                 </Button>
@@ -138,6 +169,14 @@ export default function UsersPage() {
                     ))}
                 </tbody>
             </Table>
+
+            {/* The modal — rendered once, shown/hidden via the show prop */}
+            <UserFormModal
+                show={showModal}
+                onClose={handleClose}
+                onSave={handleSave}
+                user={selectedUser}  // null → create mode, object → edit mode
+            />
         </Container>
     );
 }
