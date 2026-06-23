@@ -17,6 +17,12 @@ const labelRoutes = require('./routes/labelRoutes');
 const attachmentRoutes = require('./routes/attachmentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
+// Jobs (Step 4.11)
+const { startDeadlineReminderJob } = require('./jobs/deadlineReminders');
+
+// Error Handler Middleware
+const errorHandler = require('./middleware/errorHandler');
+
 const app = express();
 
 // Security headers
@@ -57,11 +63,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Global Error Handler (must be registered after all other routes and middlewares)
+app.use(errorHandler);
+
 // Create HTTP Server
 const server = http.createServer(app);
 
 // Initialize Socket.IO
 initSocket(server);
+
+// Start cron job for deadline reminders
+startDeadlineReminderJob();
 
 // Server Port
 const PORT = process.env.PORT || 8000;
