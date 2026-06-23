@@ -21,6 +21,11 @@ app.use(cors({
   credentials: true,
 }));
 
+const projectRoutes = require('./routes/projectRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+
+
+
 // Let the server read JSON sent in request bodies
 app.use(express.json());
 
@@ -42,6 +47,10 @@ app.use('/api/projects', projectRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+
+
 
 // Start listening for requests
 const server = http.createServer(app); // wrap the Express app

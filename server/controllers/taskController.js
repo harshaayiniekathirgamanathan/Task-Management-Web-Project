@@ -1,5 +1,5 @@
-// List all projects placeholder
-async function listProjects(req, res, next) {
+// List tasks placeholder
+async function listTasks(req, res, next) {
     try {
         res.json([]);
     } catch (err) {
@@ -8,6 +8,5 @@ async function listProjects(req, res, next) {
 }
 
 module.exports = {
-    listProjects,
+    listTasks,
 };
-

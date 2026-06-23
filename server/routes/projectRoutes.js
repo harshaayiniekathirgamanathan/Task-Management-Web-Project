@@ -6,7 +6,7 @@ const { listProjects } = require('../controllers/projectController');
 // All project routes require login
 router.use(authMiddleware);
 
-// GET /api/projects → returns empty array for now
+// GET /api/projects
 router.get('/', listProjects);
 
 module.exports = router;
