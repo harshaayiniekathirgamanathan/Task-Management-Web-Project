@@ -9,6 +9,7 @@ const http = require('http');
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -37,6 +38,9 @@ app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
 
 // Start listening for requests
 const server = http.createServer(app); // wrap the Express app
