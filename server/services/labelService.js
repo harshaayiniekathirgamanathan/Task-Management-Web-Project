@@ -4,7 +4,7 @@ const supabase = require('../utils/supabase');
 async function getLabels(projectId) {
   const { data, error } = await supabase
     .from('labels')
-    .select('*')
+    .select('id, name, color')
     .eq('project_id', projectId)
     .order('created_at', { ascending: true });
 
@@ -25,7 +25,7 @@ async function createLabel(projectId, userId, name, color) {
         color,
       },
     ])
-    .select()
+    .select('id, name, color')
     .single();
 
   if (error) throw error;
@@ -33,8 +33,20 @@ async function createLabel(projectId, userId, name, color) {
   return data;
 }
 
-// Attach label to task
+// Attach label to task (Step 4.4 - Handles duplicate inserts gracefully)
 async function attachLabel(taskId, labelId) {
+  const { data: existing, error: checkError } = await supabase
+    .from('task_labels')
+    .select('*')
+    .eq('task_id', taskId)
+    .eq('label_id', labelId)
+    .maybeSingle();
+
+  if (checkError) throw checkError;
+  if (existing) {
+    return existing;
+  }
+
   const { data, error } = await supabase
     .from('task_labels')
     .insert([
@@ -46,7 +58,12 @@ async function attachLabel(taskId, labelId) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+      return { task_id: taskId, label_id: labelId };
+    }
+    throw error;
+  }
 
   return data;
 }

@@ -42,20 +42,32 @@ async function createNotification(
   }
 
   try {
-    emitToUser(userId, 'notification:new', {
-      id: notification.id,
-      type: notification.type,
-      message: notification.message,
-      task_id: notification.task_id,
-      created_at: notification.created_at,
-    });
+    const { getIO } = require('../sockets/io');
+    let isOnline = false;
+    try {
+      const io = getIO();
+      const room = io.sockets.adapter.rooms.get(`user:${userId}`);
+      isOnline = room && room.size > 0;
+    } catch (e) {
+      // Catch error during test setups where Socket.IO might not be initialized
+    }
 
-    await supabase
-      .from('notifications')
-      .update({ is_delivered: true })
-      .eq('id', notification.id);
+    if (isOnline) {
+      emitToUser(userId, 'notification:new', {
+        id: notification.id,
+        type: notification.type,
+        message: notification.message,
+        task_id: notification.task_id,
+        created_at: notification.created_at,
+      });
 
-    notification.is_delivered = true;
+      await supabase
+        .from('notifications')
+        .update({ is_delivered: true })
+        .eq('id', notification.id);
+
+      notification.is_delivered = true;
+    }
   } catch (err) {
     console.error('Notification delivery failed:', err.message);
   }
