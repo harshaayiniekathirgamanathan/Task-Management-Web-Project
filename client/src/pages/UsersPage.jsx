@@ -4,10 +4,9 @@ import {
     Table, Badge, Button,
     Form, InputGroup
 } from 'react-bootstrap';
-import UserFormModal from '../components/UserFormModal'; // <-- new import
+import UserFormModal from '../components/UserFormModal';
+import ConfirmDialog from '../components/ConfirmDialog'; // <-- new import
 
-// Hard-coded fake users matching the API contract
-// Shape: { id, name, email, role, is_active, created_at }
 const FAKE_USERS = [
     {
         id: '1',
@@ -40,47 +39,67 @@ function roleBadgeVariant(role) {
 }
 
 export default function UsersPage() {
-    // Search and filter state — no filtering logic yet
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
 
-    // Modal state
+    // --- UserFormModal state ---
     const [showModal, setShowModal] = useState(false);
-    const [selectedUser, setSelectedUser] = useState(null); // null = create mode
+    const [selectedUser, setSelectedUser] = useState(null);
 
-    // Open in CREATE mode — no user pre-selected
+    // --- ConfirmDialog state ---
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [userToDeactivate, setUserToDeactivate] = useState(null); // which user was clicked
+
+    // ---- UserFormModal handlers ----
     function handleAddClick() {
         setSelectedUser(null);
         setShowModal(true);
     }
 
-    // Open in EDIT mode — pass the clicked user row
     function handleEditClick(user) {
         setSelectedUser(user);
         setShowModal(true);
     }
 
-    // Called by the modal's Save button
     function handleSave(formValues) {
-        // For now just log — will be replaced by an API call later
         console.log('Saving user:', formValues);
-        // Modal closes itself after calling onSave
     }
 
-    function handleClose() {
+    function handleModalClose() {
         setShowModal(false);
-        setSelectedUser(null); // reset so next open starts fresh
+        setSelectedUser(null);
+    }
+
+    // ---- ConfirmDialog handlers ----
+
+    // Clicking Deactivate sets the target and opens the dialog
+    function handleDeactivateClick(user) {
+        setUserToDeactivate(user);
+        setShowConfirm(true);
+    }
+
+    // User clicked Confirm inside the dialog
+    function handleConfirmDeactivate() {
+        // For now just log — replace with API call later
+        console.log('Deactivating user:', userToDeactivate);
+        setShowConfirm(false);
+        setUserToDeactivate(null);
+    }
+
+    // User cancelled the dialog
+    function handleConfirmClose() {
+        setShowConfirm(false);
+        setUserToDeactivate(null);
     }
 
     return (
         <Container className="py-4">
-            {/* Page heading + Add User button */}
+            {/* Heading + Add User button */}
             <Row className="mb-4 align-items-center">
                 <Col>
                     <h2 className="fw-bold mb-0">Users</h2>
                 </Col>
                 <Col xs="auto">
-                    {/* Opens the modal in create mode */}
                     <Button variant="primary" onClick={handleAddClick}>
                         + Add User
                     </Button>
@@ -148,7 +167,6 @@ export default function UsersPage() {
                             </td>
 
                             <td className="align-middle">
-                                {/* Opens the modal pre-filled with this user's data */}
                                 <Button
                                     variant="outline-primary"
                                     size="sm"
@@ -157,10 +175,12 @@ export default function UsersPage() {
                                 >
                                     Edit
                                 </Button>
+
+                                {/* Now opens the confirm dialog instead of doing nothing */}
                                 <Button
                                     variant="outline-danger"
                                     size="sm"
-                                    onClick={() => { }} // wire up deactivate later
+                                    onClick={() => handleDeactivateClick(u)}
                                 >
                                     Deactivate
                                 </Button>
@@ -170,12 +190,20 @@ export default function UsersPage() {
                 </tbody>
             </Table>
 
-            {/* The modal — rendered once, shown/hidden via the show prop */}
+            {/* UserFormModal — create or edit */}
             <UserFormModal
                 show={showModal}
-                onClose={handleClose}
+                onClose={handleModalClose}
                 onSave={handleSave}
-                user={selectedUser}  // null → create mode, object → edit mode
+                user={selectedUser}
+            />
+
+            {/* ConfirmDialog — shown before deactivating */}
+            <ConfirmDialog
+                show={showConfirm}
+                message={`Deactivate this user (${userToDeactivate?.name})?`}
+                onConfirm={handleConfirmDeactivate}
+                onClose={handleConfirmClose}
             />
         </Container>
     );
