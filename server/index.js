@@ -9,6 +9,8 @@ const http = require('http');
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -51,6 +53,10 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 
 
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Start listening for requests
 const server = http.createServer(app); // wrap the Express app
