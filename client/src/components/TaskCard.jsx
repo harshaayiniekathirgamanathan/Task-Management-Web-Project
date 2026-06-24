@@ -1,7 +1,7 @@
 import React from 'react';
-import { Card, Badge } from 'react-bootstrap';
+import { Card, Badge, Dropdown } from 'react-bootstrap';
 
-const TaskCard = ({ task, onOpen }) => {
+const TaskCard = ({ task, onOpen, onStatusChange }) => {
     // Helper to pick the right color for the priority badge
     const getPriorityVariant = (priority) => {
         switch (priority?.toLowerCase()) {
@@ -53,6 +53,22 @@ const TaskCard = ({ task, onOpen }) => {
                         ))}
                     </div>
                 )}
+                {/* Status dropdown */}
+                <Dropdown
+                    className="mb-3"
+                    onClick={(event) => event.stopPropagation()}
+                    onSelect={(newStatus) => onStatusChange(task.id, newStatus)}
+                >
+                    <Dropdown.Toggle variant="outline-primary" size="sm">
+                        Change Status
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu>
+                        <Dropdown.Item eventKey="todo">To Do</Dropdown.Item>
+                        <Dropdown.Item eventKey="in_progress">In Progress</Dropdown.Item>
+                        <Dropdown.Item eventKey="completed">Completed</Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
 
                 {/* Bottom Row: Due Date and Assignee Initials */}
                 <div className="d-flex justify-content-between align-items-end">

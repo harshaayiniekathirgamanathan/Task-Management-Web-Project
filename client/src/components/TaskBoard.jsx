@@ -36,7 +36,9 @@ const TaskBoard = () => {
     const handleOpenTask = (task) => {
         alert(`Clicked task to open: ${task.title}`);
     };
-
+    const handleStatusChange = (taskId, newStatus) => {
+    console.log('Status changed:', taskId, newStatus);
+    };
     return (
         <Row className="g-3">
             {/* To Do Column */}
@@ -47,7 +49,12 @@ const TaskBoard = () => {
                         <span className="badge bg-secondary rounded-pill">{todoTasks.length}</span>
                     </h5>
                     {todoTasks.map(task => (
-                        <TaskCard key={task.id} task={task} onOpen={handleOpenTask} />
+                        <TaskCard
+                        key={task.id}
+                        task={task}
+                        onOpen={handleOpenTask}
+                        onStatusChange={handleStatusChange}
+                    />
                     ))}
                 </div>
             </Col>
@@ -60,7 +67,12 @@ const TaskBoard = () => {
                         <span className="badge bg-secondary rounded-pill">{inProgressTasks.length}</span>
                     </h5>
                     {inProgressTasks.map(task => (
-                        <TaskCard key={task.id} task={task} onOpen={handleOpenTask} />
+                        <TaskCard
+                        key={task.id}
+                        task={task}
+                        onOpen={handleOpenTask}
+                        onStatusChange={handleStatusChange}
+                    />
                     ))}
                 </div>
             </Col>
@@ -73,7 +85,12 @@ const TaskBoard = () => {
                         <span className="badge bg-secondary rounded-pill">{completedTasks.length}</span>
                     </h5>
                     {completedTasks.map(task => (
-                        <TaskCard key={task.id} task={task} onOpen={handleOpenTask} />
+                        <TaskCard
+                            key={task.id}
+                            task={task}
+                            onOpen={handleOpenTask}
+                            onStatusChange={handleStatusChange}
+                        />
                     ))}
                 </div>
             </Col>
