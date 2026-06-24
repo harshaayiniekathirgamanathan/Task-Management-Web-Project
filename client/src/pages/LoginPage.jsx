@@ -2,38 +2,53 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { login as loginApi } from '../api/auth'; // <-- real API call
 
 export default function LoginPage() {
-    // Controlled state for each field
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-
-    // Show an error banner when fields are empty
     const [error, setError] = useState('');
+
+    // loading flag disables the button while the request is in-flight
+    const [loading, setLoading] = useState(false);
 
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    function handleSubmit(e) {
-        e.preventDefault();  // stop the browser from reloading the page
+    async function handleSubmit(e) {
+        e.preventDefault();
 
-        // Validation — both fields must be filled
+        // Client-side: both fields must be filled before we bother the server
         if (!email || !password) {
             setError('Please fill in both email and password.');
             return;
         }
 
-        // Clear any previous error
         setError('');
+        setLoading(true); // disable the button
 
-        // --- FAKE LOGIN (swap this for a real API call later) ---
-        login(
-            { id: '1', name: 'Test Admin', role: 'admin', must_reset_password: false },
-            'fake-token'
-        );
+        try {
+            // --- REAL API CALL ---
+            // Returns { user, accessToken } on success
+            const data = await loginApi(email, password);
 
-        // Redirect to the dashboard
-        navigate('/');
+            // Store the user and token in context (also saves user to localStorage)
+            login(data.user, data.accessToken);
+
+            // If the server flagged that the password must be reset, go there first
+            if (data.user.must_reset_password) {
+                navigate('/change-password');
+            } else {
+                navigate('/');
+            }
+        } catch (err) {
+            // Show the server's error message if it sent one, otherwise a fallback
+            const serverMessage =
+                err.response?.data?.message || 'Login failed. Please try again.';
+            setError(serverMessage);
+        } finally {
+            setLoading(false); // re-enable the button either way
+        }
     }
 
     return (
@@ -44,7 +59,7 @@ export default function LoginPage() {
                         <Card.Body>
                             <h2 className="text-center mb-4 fw-bold text-primary">Task Manager</h2>
 
-                            {/* Error banner — only renders when error is non-empty */}
+                            {/* Error banner — shown when error is non-empty */}
                             {error && (
                                 <Alert variant="danger" onClose={() => setError('')} dismissible>
                                     {error}
@@ -76,8 +91,14 @@ export default function LoginPage() {
                                     />
                                 </Form.Group>
 
-                                <Button variant="primary" type="submit" className="w-100 mt-3 py-2 fw-semibold shadow-sm">
-                                    Log in
+                                {/* Button is disabled while the request is in-flight */}
+                                <Button
+                                    variant="primary"
+                                    type="submit"
+                                    className="w-100 mt-3 py-2 fw-semibold shadow-sm"
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Logging in…' : 'Log in'}
                                 </Button>
                             </Form>
                         </Card.Body>
@@ -87,5 +108,3 @@ export default function LoginPage() {
         </Container>
     );
 }
-
-
