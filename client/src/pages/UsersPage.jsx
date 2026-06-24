@@ -1,46 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Container, Row, Col,
     Table, Badge, Button,
-    Form, InputGroup
+    Form, InputGroup,
+    Spinner, Alert
 } from 'react-bootstrap';
 import UserFormModal from '../components/UserFormModal';
-import ConfirmDialog from '../components/ConfirmDialog'; // <-- new import
+import ConfirmDialog from '../components/ConfirmDialog';
+import { listUsers } from '../api/users'; // <-- real API call
 
-const FAKE_USERS = [
-    {
-        id: '1',
-        name: 'Alice Admin',
-        email: 'alice@example.com',
-        role: 'admin',
-        is_active: true,
-        created_at: '2024-01-10T08:00:00Z',
-    },
-    {
-        id: '2',
-        name: 'Bob Member',
-        email: 'bob@example.com',
-        role: 'member',
-        is_active: true,
-        created_at: '2024-02-15T09:30:00Z',
-    },
-    {
-        id: '3',
-        name: 'Carol Inactive',
-        email: 'carol@example.com',
-        role: 'member',
-        is_active: false,
-        created_at: '2024-03-20T14:00:00Z',
-    },
-];
-
+// roleBadgeVariant — pick a badge colour based on the role string
 function roleBadgeVariant(role) {
     return role === 'admin' ? 'primary' : 'secondary';
 }
 
+// DEBOUNCE_MS — how long to wait after the user stops typing before fetching
+const DEBOUNCE_MS = 400;
+
 export default function UsersPage() {
+    // --- Filter state (drives the API call) ---
     const [search, setSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState('all');
+    const [roleFilter, setRoleFilter] = useState('');
+
+    // --- Data state ---
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [fetchErr, setFetchErr] = useState('');
 
     // --- UserFormModal state ---
     const [showModal, setShowModal] = useState(false);
@@ -48,7 +33,39 @@ export default function UsersPage() {
 
     // --- ConfirmDialog state ---
     const [showConfirm, setShowConfirm] = useState(false);
-    const [userToDeactivate, setUserToDeactivate] = useState(null); // which user was clicked
+    const [userToDeactivate, setUserToDeactivate] = useState(null);
+
+    // fetchUsers — calls the API and updates state
+    // Wrapped in useCallback so the debounced effect can depend on it safely
+    const fetchUsers = useCallback(async (searchVal, roleVal) => {
+        setLoading(true);
+        setFetchErr('');
+        try {
+            // Only send role param if one is actually selected
+            const params = {
+                search: searchVal || undefined,
+                role: roleVal || undefined,
+            };
+            const data = await listUsers(params);
+            setUsers(data.data); // API returns { data: [...] }
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to load users. Please try again.';
+            setFetchErr(msg);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Debounced effect — waits DEBOUNCE_MS after search/role changes before fetching.
+    // This prevents a request on every single keystroke.
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchUsers(search, roleFilter);
+        }, DEBOUNCE_MS);
+
+        // Cleanup: cancel the previous timer if the user types again before it fires
+        return () => clearTimeout(timer);
+    }, [search, roleFilter, fetchUsers]);
 
     // ---- UserFormModal handlers ----
     function handleAddClick() {
@@ -62,7 +79,10 @@ export default function UsersPage() {
     }
 
     function handleSave(formValues) {
+        // TODO: replace with real createUser / updateUser API call
         console.log('Saving user:', formValues);
+        // Re-fetch the list so the table stays in sync
+        fetchUsers(search, roleFilter);
     }
 
     function handleModalClose() {
@@ -71,22 +91,20 @@ export default function UsersPage() {
     }
 
     // ---- ConfirmDialog handlers ----
-
-    // Clicking Deactivate sets the target and opens the dialog
     function handleDeactivateClick(user) {
         setUserToDeactivate(user);
         setShowConfirm(true);
     }
 
-    // User clicked Confirm inside the dialog
     function handleConfirmDeactivate() {
-        // For now just log — replace with API call later
+        // TODO: replace with real deactivateUser API call
         console.log('Deactivating user:', userToDeactivate);
         setShowConfirm(false);
         setUserToDeactivate(null);
+        // Re-fetch so the status badge updates
+        fetchUsers(search, roleFilter);
     }
 
-    // User cancelled the dialog
     function handleConfirmClose() {
         setShowConfirm(false);
         setUserToDeactivate(null);
@@ -106,7 +124,14 @@ export default function UsersPage() {
                 </Col>
             </Row>
 
-            {/* Search + Filter bar */}
+            {/* Error banner — shown when the fetch failed */}
+            {fetchErr && (
+                <Alert variant="danger" onClose={() => setFetchErr('')} dismissible className="mb-3">
+                    {fetchErr}
+                </Alert>
+            )}
+
+            {/* Search + Role filter bar */}
             <Row className="mb-3 g-2 align-items-end">
                 <Col xs={12} md={6}>
                     <Form.Label className="fw-semibold">Search</Form.Label>
@@ -117,6 +142,7 @@ export default function UsersPage() {
                             type="text"
                             placeholder="Search by name or email…"
                             value={search}
+                            // Updating state triggers the debounced useEffect
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </InputGroup>
@@ -127,68 +153,87 @@ export default function UsersPage() {
                     <Form.Select
                         id="roleFilter"
                         value={roleFilter}
+                        // Changing role fires immediately (no debounce needed for a dropdown)
                         onChange={(e) => setRoleFilter(e.target.value)}
                     >
-                        <option value="all">All roles</option>
+                        <option value="">All roles</option>
                         <option value="admin">Admin</option>
                         <option value="member">Member</option>
                     </Form.Select>
                 </Col>
             </Row>
 
-            {/* Users Table */}
-            <Table striped bordered hover responsive className="shadow-sm">
-                <thead className="table-dark">
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {FAKE_USERS.map((u) => (
-                        <tr key={u.id}>
-                            <td className="align-middle">{u.name}</td>
-                            <td className="align-middle">{u.email}</td>
+            {/* Loading spinner — centred, shown while fetch is in-flight */}
+            {loading && (
+                <div className="text-center my-5">
+                    <Spinner animation="border" variant="primary" role="status">
+                        <span className="visually-hidden">Loading…</span>
+                    </Spinner>
+                </div>
+            )}
 
-                            <td className="align-middle">
-                                <Badge bg={roleBadgeVariant(u.role)} className="text-capitalize">
-                                    {u.role}
-                                </Badge>
-                            </td>
-
-                            <td className="align-middle">
-                                {u.is_active
-                                    ? <Badge bg="success">Active</Badge>
-                                    : <Badge bg="danger">Inactive</Badge>
-                                }
-                            </td>
-
-                            <td className="align-middle">
-                                <Button
-                                    variant="outline-primary"
-                                    size="sm"
-                                    className="me-2"
-                                    onClick={() => handleEditClick(u)}
-                                >
-                                    Edit
-                                </Button>
-
-                                {/* Now opens the confirm dialog instead of doing nothing */}
-                                <Button
-                                    variant="outline-danger"
-                                    size="sm"
-                                    onClick={() => handleDeactivateClick(u)}
-                                >
-                                    Deactivate
-                                </Button>
-                            </td>
+            {/* Table — only shown when not loading and no error */}
+            {!loading && !fetchErr && (
+                <Table striped bordered hover responsive className="shadow-sm">
+                    <thead className="table-dark">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </Table>
+                    </thead>
+                    <tbody>
+                        {users.length === 0 ? (
+                            // Empty state — no results for the current filters
+                            <tr>
+                                <td colSpan={5} className="text-center text-muted py-4">
+                                    No users found.
+                                </td>
+                            </tr>
+                        ) : (
+                            users.map((u) => (
+                                <tr key={u.id}>
+                                    <td className="align-middle">{u.name}</td>
+                                    <td className="align-middle">{u.email}</td>
+
+                                    <td className="align-middle">
+                                        <Badge bg={roleBadgeVariant(u.role)} className="text-capitalize">
+                                            {u.role}
+                                        </Badge>
+                                    </td>
+
+                                    <td className="align-middle">
+                                        {u.is_active
+                                            ? <Badge bg="success">Active</Badge>
+                                            : <Badge bg="danger">Inactive</Badge>
+                                        }
+                                    </td>
+
+                                    <td className="align-middle">
+                                        <Button
+                                            variant="outline-primary"
+                                            size="sm"
+                                            className="me-2"
+                                            onClick={() => handleEditClick(u)}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant="outline-danger"
+                                            size="sm"
+                                            onClick={() => handleDeactivateClick(u)}
+                                        >
+                                            Deactivate
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </Table>
+            )}
 
             {/* UserFormModal — create or edit */}
             <UserFormModal
