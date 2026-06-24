@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { Container, ButtonGroup, Button } from 'react-bootstrap';
 import TaskCard from '../components/TaskCard';
 import TaskBoard from '../components/TaskBoard';
+import TaskTable from '../components/TaskTable';
+
 
 
 
@@ -43,12 +45,12 @@ const ProjectDetailPage = () => {
                         <TaskBoard />
                     </div>
                 ) : (
-
-                    <div className="p-5 border rounded bg-light text-center">
-                        <h4>Table View Placeholder</h4>
-                        <p>List of tasks will go here.</p>
+                    <div className="mt-3">
+                        <TaskTable />
                     </div>
                 )}
+
+
             </div>
         </Container>
     );
