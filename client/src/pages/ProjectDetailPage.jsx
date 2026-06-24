@@ -5,8 +5,7 @@ import TaskCard from '../components/TaskCard';
 import TaskBoard from '../components/TaskBoard';
 import TaskTable from '../components/TaskTable';
 
-// You mentioned you export useAuth from SocketContext.jsx, if that's wrong, change the path to your actual AuthContext
-import { useAuth } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
 import TaskFormModal from '../components/TaskFormModal';
 
 
