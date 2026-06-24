@@ -10,8 +10,19 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { listUsers, createUser, updateUser, deactivateUser } from '../api/users';
 
 function roleBadgeVariant(role) {
-    return role === 'admin' ? 'primary' : 'secondary';
+    if (role === 'admin') return 'primary';
+    if (role === 'project_manager') return 'info';
+    return 'secondary';
 }
+
+function roleLabel(role) {
+    if (role === 'admin') return 'Admin';
+    if (role === 'project_manager') return 'Project Manager';
+    if (role === 'collaborator') return 'Collaborator';
+    return role;
+}
+
+
 
 const DEBOUNCE_MS = 400;
 
@@ -207,7 +218,8 @@ export default function UsersPage() {
                     >
                         <option value="">All roles</option>
                         <option value="admin">Admin</option>
-                        <option value="member">Member</option>
+                        <option value="project_manager">Project Manager</option>
+                        <option value="collaborator">Collaborator</option>
                     </Form.Select>
                 </Col>
             </Row>
@@ -247,9 +259,7 @@ export default function UsersPage() {
                                     <td className="align-middle">{u.email}</td>
 
                                     <td className="align-middle">
-                                        <Badge bg={roleBadgeVariant(u.role)} className="text-capitalize">
-                                            {u.role}
-                                        </Badge>
+                                        <Badge bg={roleBadgeVariant(u.role)}>{roleLabel(u.role)}</Badge>
                                     </td>
 
                                     <td className="align-middle">

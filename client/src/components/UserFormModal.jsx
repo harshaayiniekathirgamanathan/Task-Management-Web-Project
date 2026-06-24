@@ -12,7 +12,7 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState('member');
+    const [role, setRole] = useState('collaborator');
 
     useEffect(() => {
         if (user) {
@@ -22,7 +22,7 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
         } else {
             setName('');
             setEmail('');
-            setRole('member');
+            setRole('collaborator');
         }
     }, [user, show]);
 
@@ -55,13 +55,15 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
                             placeholder="name@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            disabled={isEditMode}
                         />
                     </Form.Group>
 
                     <Form.Group className="mb-3" controlId="modalUserRole">
                         <Form.Label className="fw-semibold">Role</Form.Label>
                         <Form.Select value={role} onChange={(e) => setRole(e.target.value)}>
-                            <option value="member">Member</option>
+                            <option value="collaborator">Collaborator</option>
+                            <option value="project_manager">Project Manager</option>
                             <option value="admin">Admin</option>
                         </Form.Select>
                     </Form.Group>
