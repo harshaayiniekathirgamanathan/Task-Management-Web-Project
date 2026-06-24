@@ -5,11 +5,21 @@ import TaskCard from '../components/TaskCard';
 import TaskBoard from '../components/TaskBoard';
 import TaskTable from '../components/TaskTable';
 
+// You mentioned you export useAuth from SocketContext.jsx, if that's wrong, change the path to your actual AuthContext
+import { useAuth } from '../context/SocketContext';
+import TaskFormModal from '../components/TaskFormModal';
+
+
 
 
 
 const ProjectDetailPage = () => {
     // Read the project ID from the URL (e.g., /projects/123 -> id is 123)
+    const { user } = useAuth(); // Grab the logged in user
+    //const canCreateTask = true;
+    const canCreateTask = user?.role === 'project_manager' || user?.role === 'admin';
+    const [showModal, setShowModal] = useState(false);
+
     const { id } = useParams();
 
     // State to track the current view: 'board' or 'table'
@@ -21,22 +31,21 @@ const ProjectDetailPage = () => {
             <h2>Project Alpha (ID: {id})</h2>
 
             {/* Button group to toggle between Board and Table views */}
-            <div className="mb-4">
+            <div className="mb-4 d-flex justify-content-between align-items-center">
                 <ButtonGroup>
-                    <Button
-                        variant={view === 'board' ? 'primary' : 'outline-primary'}
-                        onClick={() => setView('board')}
-                    >
-                        Board
-                    </Button>
-                    <Button
-                        variant={view === 'table' ? 'primary' : 'outline-primary'}
-                        onClick={() => setView('table')}
-                    >
-                        Table
-                    </Button>
+                    {/* Your existing Board and Table buttons stay exactly the same here */}
+                    <Button variant={view === 'board' ? 'primary' : 'outline-primary'} onClick={() => setView('board')}>Board</Button>
+                    <Button variant={view === 'table' ? 'primary' : 'outline-primary'} onClick={() => setView('table')}>Table</Button>
                 </ButtonGroup>
+
+                {/* Only show this button if they have permission */}
+                {canCreateTask && (
+                    <Button variant="success" onClick={() => setShowModal(true)}>
+                        + New Task
+                    </Button>
+                )}
             </div>
+
 
             {/* Placeholders for the actual views */}
             <div>
@@ -52,6 +61,19 @@ const ProjectDetailPage = () => {
 
 
             </div>
+
+            {/* Other stuff like Board/Table views are up here */}
+
+            <TaskFormModal
+                show={showModal}
+                onClose={() => setShowModal(false)}
+                onSave={(data) => {
+                    // When they hit save, we log the data and close the modal
+                    console.log("Parent received save:", data);
+                    setShowModal(false);
+                }}
+            />
+
         </Container>
     );
 };
