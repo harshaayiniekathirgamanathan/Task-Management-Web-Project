@@ -7,18 +7,16 @@ import {
 } from 'react-bootstrap';
 import UserFormModal from '../components/UserFormModal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { listUsers } from '../api/users'; // <-- real API call
+import { listUsers, createUser, updateUser, deactivateUser } from '../api/users';
 
-// roleBadgeVariant — pick a badge colour based on the role string
 function roleBadgeVariant(role) {
     return role === 'admin' ? 'primary' : 'secondary';
 }
 
-// DEBOUNCE_MS — how long to wait after the user stops typing before fetching
 const DEBOUNCE_MS = 400;
 
 export default function UsersPage() {
-    // --- Filter state (drives the API call) ---
+    // --- Filter state ---
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
 
@@ -26,6 +24,12 @@ export default function UsersPage() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetchErr, setFetchErr] = useState('');
+
+    // --- Action feedback (success / action error) ---
+    // Separate from fetchErr so banners don't clash
+    const [actionMsg, setActionMsg] = useState('');  // success text
+    const [actionErr, setActionErr] = useState('');  // error text
+    const [actionLoading, setActionLoading] = useState(false);
 
     // --- UserFormModal state ---
     const [showModal, setShowModal] = useState(false);
@@ -35,19 +39,21 @@ export default function UsersPage() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [userToDeactivate, setUserToDeactivate] = useState(null);
 
-    // fetchUsers — calls the API and updates state
-    // Wrapped in useCallback so the debounced effect can depend on it safely
+    // ---- Fetch helpers ----
     const fetchUsers = useCallback(async (searchVal, roleVal) => {
         setLoading(true);
         setFetchErr('');
         try {
-            // Only send role param if one is actually selected
             const params = {
                 search: searchVal || undefined,
                 role: roleVal || undefined,
             };
             const data = await listUsers(params);
-            setUsers(data.data); // API returns { data: [...] }
+            // Handle both { data: [...] } and a bare array response shape
+            const list = Array.isArray(data?.data) ? data.data
+                : Array.isArray(data) ? data
+                    : [];
+            setUsers(list);
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to load users. Please try again.';
             setFetchErr(msg);
@@ -56,33 +62,27 @@ export default function UsersPage() {
         }
     }, []);
 
-    // Debounced effect — waits DEBOUNCE_MS after search/role changes before fetching.
-    // This prevents a request on every single keystroke.
+    // Debounced re-fetch whenever search or roleFilter change
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchUsers(search, roleFilter);
         }, DEBOUNCE_MS);
-
-        // Cleanup: cancel the previous timer if the user types again before it fires
         return () => clearTimeout(timer);
     }, [search, roleFilter, fetchUsers]);
 
-    // ---- UserFormModal handlers ----
+    // ---- Modal handlers ----
     function handleAddClick() {
         setSelectedUser(null);
+        setActionMsg('');
+        setActionErr('');
         setShowModal(true);
     }
 
     function handleEditClick(user) {
         setSelectedUser(user);
+        setActionMsg('');
+        setActionErr('');
         setShowModal(true);
-    }
-
-    function handleSave(formValues) {
-        // TODO: replace with real createUser / updateUser API call
-        console.log('Saving user:', formValues);
-        // Re-fetch the list so the table stays in sync
-        fetchUsers(search, roleFilter);
     }
 
     function handleModalClose() {
@@ -90,19 +90,56 @@ export default function UsersPage() {
         setSelectedUser(null);
     }
 
-    // ---- ConfirmDialog handlers ----
+    // Called by UserFormModal's Save button
+    async function handleSave(formValues) {
+        setActionLoading(true);
+        setActionMsg('');
+        setActionErr('');
+        try {
+            if (selectedUser) {
+                // Edit mode — PATCH the existing user
+                await updateUser(selectedUser.id, formValues);
+                setActionMsg(`User "${formValues.name}" updated successfully.`);
+            } else {
+                // Create mode — POST a new user
+                await createUser(formValues);
+                setActionMsg(`User "${formValues.name}" created successfully.`);
+            }
+            handleModalClose();
+            fetchUsers(search, roleFilter); // refresh the table
+        } catch (err) {
+            // 400 usually means validation failure (e.g. duplicate email)
+            // The server sends { code, message } — show that message
+            const serverMsg = err.response?.data?.message || 'Action failed. Please try again.';
+            setActionErr(serverMsg);
+            // Keep the modal open so the user can correct the field
+        } finally {
+            setActionLoading(false);
+        }
+    }
+
+    // ---- Deactivate handlers ----
     function handleDeactivateClick(user) {
         setUserToDeactivate(user);
+        setActionMsg('');
+        setActionErr('');
         setShowConfirm(true);
     }
 
-    function handleConfirmDeactivate() {
-        // TODO: replace with real deactivateUser API call
-        console.log('Deactivating user:', userToDeactivate);
+    async function handleConfirmDeactivate() {
         setShowConfirm(false);
-        setUserToDeactivate(null);
-        // Re-fetch so the status badge updates
-        fetchUsers(search, roleFilter);
+        setActionLoading(true);
+        try {
+            await deactivateUser(userToDeactivate.id);
+            setActionMsg(`User "${userToDeactivate.name}" deactivated.`);
+            fetchUsers(search, roleFilter); // refresh the table
+        } catch (err) {
+            const serverMsg = err.response?.data?.message || 'Could not deactivate user.';
+            setActionErr(serverMsg);
+        } finally {
+            setUserToDeactivate(null);
+            setActionLoading(false);
+        }
     }
 
     function handleConfirmClose() {
@@ -118,13 +155,27 @@ export default function UsersPage() {
                     <h2 className="fw-bold mb-0">Users</h2>
                 </Col>
                 <Col xs="auto">
-                    <Button variant="primary" onClick={handleAddClick}>
+                    <Button variant="primary" onClick={handleAddClick} disabled={actionLoading}>
                         + Add User
                     </Button>
                 </Col>
             </Row>
 
-            {/* Error banner — shown when the fetch failed */}
+            {/* Success banner — shown after a create / update / deactivate */}
+            {actionMsg && (
+                <Alert variant="success" onClose={() => setActionMsg('')} dismissible className="mb-3">
+                    {actionMsg}
+                </Alert>
+            )}
+
+            {/* Action error banner — server errors from create/update/deactivate */}
+            {actionErr && (
+                <Alert variant="danger" onClose={() => setActionErr('')} dismissible className="mb-3">
+                    {actionErr}
+                </Alert>
+            )}
+
+            {/* Fetch error banner — shown when the list GET fails */}
             {fetchErr && (
                 <Alert variant="danger" onClose={() => setFetchErr('')} dismissible className="mb-3">
                     {fetchErr}
@@ -142,7 +193,6 @@ export default function UsersPage() {
                             type="text"
                             placeholder="Search by name or email…"
                             value={search}
-                            // Updating state triggers the debounced useEffect
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </InputGroup>
@@ -153,7 +203,6 @@ export default function UsersPage() {
                     <Form.Select
                         id="roleFilter"
                         value={roleFilter}
-                        // Changing role fires immediately (no debounce needed for a dropdown)
                         onChange={(e) => setRoleFilter(e.target.value)}
                     >
                         <option value="">All roles</option>
@@ -163,7 +212,7 @@ export default function UsersPage() {
                 </Col>
             </Row>
 
-            {/* Loading spinner — centred, shown while fetch is in-flight */}
+            {/* Loading spinner */}
             {loading && (
                 <div className="text-center my-5">
                     <Spinner animation="border" variant="primary" role="status">
@@ -172,7 +221,7 @@ export default function UsersPage() {
                 </div>
             )}
 
-            {/* Table — only shown when not loading and no error */}
+            {/* Table — only rendered when not loading and no fetch error */}
             {!loading && !fetchErr && (
                 <Table striped bordered hover responsive className="shadow-sm">
                     <thead className="table-dark">
@@ -185,8 +234,7 @@ export default function UsersPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.length === 0 ? (
-                            // Empty state — no results for the current filters
+                        {(users ?? []).length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="text-center text-muted py-4">
                                     No users found.
@@ -217,6 +265,7 @@ export default function UsersPage() {
                                             size="sm"
                                             className="me-2"
                                             onClick={() => handleEditClick(u)}
+                                            disabled={actionLoading}
                                         >
                                             Edit
                                         </Button>
@@ -224,6 +273,7 @@ export default function UsersPage() {
                                             variant="outline-danger"
                                             size="sm"
                                             onClick={() => handleDeactivateClick(u)}
+                                            disabled={actionLoading}
                                         >
                                             Deactivate
                                         </Button>
@@ -235,18 +285,19 @@ export default function UsersPage() {
                 </Table>
             )}
 
-            {/* UserFormModal — create or edit */}
+            {/* UserFormModal — passes actionLoading so Save button disables too */}
             <UserFormModal
                 show={showModal}
                 onClose={handleModalClose}
                 onSave={handleSave}
                 user={selectedUser}
+                loading={actionLoading}
             />
 
             {/* ConfirmDialog — shown before deactivating */}
             <ConfirmDialog
                 show={showConfirm}
-                message={`Deactivate this user (${userToDeactivate?.name})?`}
+                message={`Deactivate "${userToDeactivate?.name}"? They will no longer be able to log in.`}
                 onConfirm={handleConfirmDeactivate}
                 onClose={handleConfirmClose}
             />
