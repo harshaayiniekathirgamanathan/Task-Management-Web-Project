@@ -14,6 +14,8 @@ const swaggerSpec = require('./config/swagger');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 
+const errorHandler = require('./middleware/errorHandler');
+
 const app = express();
 
 // Add safe security headers to every response
@@ -45,6 +47,8 @@ app.get('/health', (req, res) => {
 // API Routes (mount each ONCE)
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+
+app.use(errorHandler);
 
 // Start listening for requests
 const server = http.createServer(app); // wrap the Express app
