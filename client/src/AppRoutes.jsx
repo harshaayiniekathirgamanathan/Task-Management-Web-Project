@@ -5,11 +5,8 @@ import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import UsersPage from './pages/UsersPage';
-import ProjectsPage from './pages/ProjectsPage'; // <-- new import
-
-function Placeholder({ name }) {
-  return <h2 style={{ padding: '2rem' }}>{name} page (coming soon)</h2>;
-}
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 
 export default function AppRoutes() {
   return (
@@ -21,11 +18,9 @@ export default function AppRoutes() {
       <Route element={<Layout />}>
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
 
-        {/* Swap Placeholder for the real ProjectsPage */}
         <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
 
-        {/* Project detail still a placeholder — built in the next step */}
-        <Route path="/projects/:id" element={<ProtectedRoute><Placeholder name="Project detail" /></ProtectedRoute>} />
+        <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
 
         <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
 

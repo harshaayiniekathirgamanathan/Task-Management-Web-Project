@@ -1,6 +1,7 @@
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -27,9 +28,13 @@ export default function Layout() {
               )}
             </Nav>
             {user && (
-              <Button variant="outline-light" onClick={handleLogout}>
-                Logout
-              </Button>
+              <Nav className="align-items-lg-center gap-2">
+                <NotificationBell />
+
+                <Button variant="outline-light" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </Nav>
             )}
           </Navbar.Collapse>
         </Container>
