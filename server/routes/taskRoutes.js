@@ -20,7 +20,7 @@ router.post(
   [
     body('project_id')
       .notEmpty().withMessage('project_id is required')
-      .bail() // stop here if it's empty, so we don't also report "not a valid id"
+      .bail()
       .isUUID().withMessage('project_id must be a valid id'),
 
     body('title')
@@ -41,6 +41,13 @@ router.post(
         }
         return true;
       }),
+
+    // assignee_ids is optional; if present it must be an array of valid user ids
+    body('assignee_ids')
+      .optional()
+      .isArray().withMessage('assignee_ids must be an array'),
+    body('assignee_ids.*')
+      .isUUID().withMessage('each assignee id must be a valid id'),
   ],
   validate,
   taskController.createTask
