@@ -9,6 +9,8 @@ const http = require('http');
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Route files (declare each ONCE)
 const projectRoutes = require('./routes/projectRoutes');
@@ -47,6 +49,9 @@ app.get('/health', (req, res) => {
 // API Routes (mount each ONCE)
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+// in the API Routes section, alongside the existing mounts (before app.use(errorHandler)):
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 app.use(errorHandler);
 
