@@ -1,47 +1,87 @@
-import { useState } from 'react';
-import { NavDropdown, Badge } from 'react-bootstrap';
-
-const fakeNotifications = [
-    {
-        id: 1,
-        type: 'task_assigned',
-        message: 'You were assigned to Setup Database.',
-        created_at: '2026-06-24T09:30:00',
-        is_read: false
-    },
-    {
-        id: 2,
-        type: 'comment_added',
-        message: 'Alice commented on Design Login Page.',
-        created_at: '2026-06-23T14:15:00',
-        is_read: false
-    },
-    {
-        id: 3,
-        type: 'status_changed',
-        message: 'Build Auth API was moved to In Progress.',
-        created_at: '2026-06-22T11:00:00',
-        is_read: true
-    }
-];
+import { useEffect, useState } from 'react';
+import { NavDropdown, Badge, Toast, ToastContainer } from 'react-bootstrap';
+import { listNotifications, markRead } from '../api/notifications';
+import { useSocket } from '../context/SocketContext';
 
 const NotificationBell = () => {
-    const [notifications, setNotifications] = useState(fakeNotifications);
+    const socket = useSocket();
+
+    const [notifications, setNotifications] = useState([]);
+    const [error, setError] = useState('');
+    const [toastNotification, setToastNotification] = useState(null);
+    const [showToast, setShowToast] = useState(false);
+
+    useEffect(() => {
+        async function loadNotifications() {
+            try {
+                setError('');
+
+                const data = await listNotifications();
+                setNotifications(data);
+            } catch (err) {
+                console.error('Failed to load notifications:', err);
+                setError('Could not load notifications.');
+            }
+        }
+
+        loadNotifications();
+    }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNewNotification = (notification) => {
+            const newNotification = {
+                ...notification,
+                is_read: false
+            };
+
+            setNotifications(currentNotifications => {
+                const alreadyExists = currentNotifications.some(
+                    item => item.id === newNotification.id
+                );
+
+                if (alreadyExists) {
+                    return currentNotifications;
+                }
+
+                return [newNotification, ...currentNotifications];
+            });
+
+            setToastNotification(newNotification);
+            setShowToast(true);
+        };
+
+        socket.on('notification:new', handleNewNotification);
+
+        return () => {
+            socket.off('notification:new', handleNewNotification);
+        };
+    }, [socket]);
 
     const unreadCount = notifications.filter(
         notification => !notification.is_read
     ).length;
 
-    const handleNotificationClick = (notificationId) => {
-        setNotifications(currentNotifications =>
-            currentNotifications.map(notification =>
-                notification.id === notificationId
-                    ? { ...notification, is_read: true }
-                    : notification
-            )
-        );
+    const handleNotificationClick = async (notification) => {
+        if (notification.is_read) return;
 
-        console.log('Notification marked as read:', notificationId);
+        try {
+            setError('');
+
+            await markRead(notification.id);
+
+            setNotifications(currentNotifications =>
+                currentNotifications.map(item =>
+                    item.id === notification.id
+                    ? { ...notification, is_read: true }
+                    : item
+                )
+            );
+        } catch (err) {
+            console.error('Failed to mark notification as read:', err);
+            setError('Could not mark notification as read.');
+        }
     };
 
     const bellTitle = (
@@ -55,35 +95,58 @@ const NotificationBell = () => {
     );
 
     return (
-        <NavDropdown
-            title={bellTitle}
-            id="notification-dropdown"
-            align="end"
-        >
-            <NavDropdown.Header>Notifications</NavDropdown.Header>
+        <>
+            <NavDropdown
+                title={bellTitle}
+                id="notification-dropdown"
+                align="end"
+            >
+                <NavDropdown.Header>Notifications</NavDropdown.Header>
 
-            {notifications.map(notification => (
-                <NavDropdown.Item
-                    key={notification.id}
-                    onClick={() =>
-                        handleNotificationClick(notification.id)
-                    }
-                    className={notification.is_read ? 'text-muted' : 'fw-bold'}
+                {error && (
+                    <NavDropdown.ItemText className="text-danger">
+                        {error}
+                    </NavDropdown.ItemText>
+                )}
+
+                {notifications.map(notification => (
+                    <NavDropdown.Item
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification)}
+                        className={notification.is_read ? 'text-muted' : 'fw-bold'}
+                    >
+                        <div>{notification.message}</div>
+
+                        <small className="text-muted">
+                            {new Date(notification.created_at).toLocaleString()}
+                        </small>
+                    </NavDropdown.Item>
+                ))}
+
+                {notifications.length === 0 && !error && (
+                    <NavDropdown.ItemText>
+                        No notifications
+                    </NavDropdown.ItemText>
+                )}
+            </NavDropdown>
+
+            <ToastContainer position="top-end" className="p-3">
+                <Toast
+                    show={showToast}
+                    onClose={() => setShowToast(false)}
+                    delay={4000}
+                    autohide
                 >
-                    <div>{notification.message}</div>
+                    <Toast.Header>
+                        <strong className="me-auto">New notification</strong>
+                    </Toast.Header>
 
-                    <small className="text-muted">
-                        {new Date(notification.created_at).toLocaleString()}
-                    </small>
-                </NavDropdown.Item>
-            ))}
-
-            {notifications.length === 0 && (
-                <NavDropdown.ItemText>
-                    No notifications
-                </NavDropdown.ItemText>
-            )}
-        </NavDropdown>
+                    <Toast.Body>
+                        {toastNotification?.message}
+                    </Toast.Body>
+                </Toast>
+            </ToastContainer>
+        </>
     );
 };
 
