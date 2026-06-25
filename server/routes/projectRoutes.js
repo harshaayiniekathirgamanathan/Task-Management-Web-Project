@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 const router = express.Router();
 
 const authMiddleware = require('../middleware/authMiddleware');
@@ -16,15 +16,41 @@ router.get('/', projectController.listProjects);
 // POST /api/projects -> create a project (managers/admins only)
 router.post(
   '/',
-  requireRole('project_manager', 'admin'), // role check first
+  requireRole('project_manager', 'admin'),
   [
-    body('title')
-      .trim()
-      .notEmpty()
-      .withMessage('Title is required'),
+    body('title').trim().notEmpty().withMessage('Title is required'),
   ],
-  validate, // returns 400 with the message above if title is missing
+  validate,
   projectController.createProject
+);
+
+// GET /api/projects/:id -> one project (any logged-in user)
+router.get(
+  '/:id',
+  [param('id').isUUID().withMessage('Invalid project id')],
+  validate,
+  projectController.getProject
+);
+
+// PATCH /api/projects/:id -> update title/description (managers/admins only)
+router.patch(
+  '/:id',
+  requireRole('project_manager', 'admin'), // role check first -> collaborator gets 403
+  [
+    param('id').isUUID().withMessage('Invalid project id'),
+    body('title').optional().trim().notEmpty().withMessage('Title cannot be empty'),
+  ],
+  validate,
+  projectController.updateProject
+);
+
+// DELETE /api/projects/:id -> remove it (managers/admins only)
+router.delete(
+  '/:id',
+  requireRole('project_manager', 'admin'),
+  [param('id').isUUID().withMessage('Invalid project id')],
+  validate,
+  projectController.deleteProject
 );
 
 module.exports = router;
