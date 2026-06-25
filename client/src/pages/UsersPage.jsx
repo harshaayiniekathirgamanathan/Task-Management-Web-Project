@@ -1,46 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Container, Row, Col,
     Table, Badge, Button,
-    Form, InputGroup
+    Form, InputGroup,
+    Spinner, Alert
 } from 'react-bootstrap';
 import UserFormModal from '../components/UserFormModal';
-import ConfirmDialog from '../components/ConfirmDialog'; // <-- new import
-
-const FAKE_USERS = [
-    {
-        id: '1',
-        name: 'Alice Admin',
-        email: 'alice@example.com',
-        role: 'admin',
-        is_active: true,
-        created_at: '2024-01-10T08:00:00Z',
-    },
-    {
-        id: '2',
-        name: 'Bob Member',
-        email: 'bob@example.com',
-        role: 'member',
-        is_active: true,
-        created_at: '2024-02-15T09:30:00Z',
-    },
-    {
-        id: '3',
-        name: 'Carol Inactive',
-        email: 'carol@example.com',
-        role: 'member',
-        is_active: false,
-        created_at: '2024-03-20T14:00:00Z',
-    },
-];
+import ConfirmDialog from '../components/ConfirmDialog';
+import { listUsers, createUser, updateUser, deactivateUser } from '../api/users';
 
 function roleBadgeVariant(role) {
-    return role === 'admin' ? 'primary' : 'secondary';
+    if (role === 'admin') return 'primary';
+    if (role === 'project_manager') return 'info';
+    return 'secondary';
 }
 
+function roleLabel(role) {
+    if (role === 'admin') return 'Admin';
+    if (role === 'project_manager') return 'Project Manager';
+    if (role === 'collaborator') return 'Collaborator';
+    return role;
+}
+
+
+
+const DEBOUNCE_MS = 400;
+
 export default function UsersPage() {
+    // --- Filter state ---
     const [search, setSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState('all');
+    const [roleFilter, setRoleFilter] = useState('');
+
+    // --- Data state ---
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [fetchErr, setFetchErr] = useState('');
+
+    // --- Action feedback (success / action error) ---
+    // Separate from fetchErr so banners don't clash
+    const [actionMsg, setActionMsg] = useState('');  // success text
+    const [actionErr, setActionErr] = useState('');  // error text
+    const [actionLoading, setActionLoading] = useState(false);
 
     // --- UserFormModal state ---
     const [showModal, setShowModal] = useState(false);
@@ -48,21 +48,52 @@ export default function UsersPage() {
 
     // --- ConfirmDialog state ---
     const [showConfirm, setShowConfirm] = useState(false);
-    const [userToDeactivate, setUserToDeactivate] = useState(null); // which user was clicked
+    const [userToDeactivate, setUserToDeactivate] = useState(null);
 
-    // ---- UserFormModal handlers ----
+    // ---- Fetch helpers ----
+    const fetchUsers = useCallback(async (searchVal, roleVal) => {
+        setLoading(true);
+        setFetchErr('');
+        try {
+            const params = {
+                search: searchVal || undefined,
+                role: roleVal || undefined,
+            };
+            const data = await listUsers(params);
+            // Handle both { data: [...] } and a bare array response shape
+            const list = Array.isArray(data?.data) ? data.data
+                : Array.isArray(data) ? data
+                    : [];
+            setUsers(list);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to load users. Please try again.';
+            setFetchErr(msg);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Debounced re-fetch whenever search or roleFilter change
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchUsers(search, roleFilter);
+        }, DEBOUNCE_MS);
+        return () => clearTimeout(timer);
+    }, [search, roleFilter, fetchUsers]);
+
+    // ---- Modal handlers ----
     function handleAddClick() {
         setSelectedUser(null);
+        setActionMsg('');
+        setActionErr('');
         setShowModal(true);
     }
 
     function handleEditClick(user) {
         setSelectedUser(user);
+        setActionMsg('');
+        setActionErr('');
         setShowModal(true);
-    }
-
-    function handleSave(formValues) {
-        console.log('Saving user:', formValues);
     }
 
     function handleModalClose() {
@@ -70,23 +101,58 @@ export default function UsersPage() {
         setSelectedUser(null);
     }
 
-    // ---- ConfirmDialog handlers ----
+    // Called by UserFormModal's Save button
+    async function handleSave(formValues) {
+        setActionLoading(true);
+        setActionMsg('');
+        setActionErr('');
+        try {
+            if (selectedUser) {
+                // Edit mode — PATCH the existing user
+                await updateUser(selectedUser.id, formValues);
+                setActionMsg(`User "${formValues.name}" updated successfully.`);
+            } else {
+                // Create mode — POST a new user
+                await createUser(formValues);
+                setActionMsg(`User "${formValues.name}" created successfully.`);
+            }
+            handleModalClose();
+            fetchUsers(search, roleFilter); // refresh the table
+        } catch (err) {
+            // 400 usually means validation failure (e.g. duplicate email)
+            // The server sends { code, message } — show that message
+            const serverMsg = err.response?.data?.message || 'Action failed. Please try again.';
+            setActionErr(serverMsg);
+            // Keep the modal open so the user can correct the field
+        } finally {
+            setActionLoading(false);
+        }
+    }
 
-    // Clicking Deactivate sets the target and opens the dialog
+    // ---- Deactivate handlers ----
     function handleDeactivateClick(user) {
         setUserToDeactivate(user);
+        setActionMsg('');
+        setActionErr('');
         setShowConfirm(true);
     }
 
-    // User clicked Confirm inside the dialog
-    function handleConfirmDeactivate() {
-        // For now just log — replace with API call later
-        console.log('Deactivating user:', userToDeactivate);
+    async function handleConfirmDeactivate() {
         setShowConfirm(false);
-        setUserToDeactivate(null);
+        setActionLoading(true);
+        try {
+            await deactivateUser(userToDeactivate.id);
+            setActionMsg(`User "${userToDeactivate.name}" deactivated.`);
+            fetchUsers(search, roleFilter); // refresh the table
+        } catch (err) {
+            const serverMsg = err.response?.data?.message || 'Could not deactivate user.';
+            setActionErr(serverMsg);
+        } finally {
+            setUserToDeactivate(null);
+            setActionLoading(false);
+        }
     }
 
-    // User cancelled the dialog
     function handleConfirmClose() {
         setShowConfirm(false);
         setUserToDeactivate(null);
@@ -100,13 +166,34 @@ export default function UsersPage() {
                     <h2 className="fw-bold mb-0">Users</h2>
                 </Col>
                 <Col xs="auto">
-                    <Button variant="primary" onClick={handleAddClick}>
+                    <Button variant="primary" onClick={handleAddClick} disabled={actionLoading}>
                         + Add User
                     </Button>
                 </Col>
             </Row>
 
-            {/* Search + Filter bar */}
+            {/* Success banner — shown after a create / update / deactivate */}
+            {actionMsg && (
+                <Alert variant="success" onClose={() => setActionMsg('')} dismissible className="mb-3">
+                    {actionMsg}
+                </Alert>
+            )}
+
+            {/* Action error banner — server errors from create/update/deactivate */}
+            {actionErr && (
+                <Alert variant="danger" onClose={() => setActionErr('')} dismissible className="mb-3">
+                    {actionErr}
+                </Alert>
+            )}
+
+            {/* Fetch error banner — shown when the list GET fails */}
+            {fetchErr && (
+                <Alert variant="danger" onClose={() => setFetchErr('')} dismissible className="mb-3">
+                    {fetchErr}
+                </Alert>
+            )}
+
+            {/* Search + Role filter bar */}
             <Row className="mb-3 g-2 align-items-end">
                 <Col xs={12} md={6}>
                     <Form.Label className="fw-semibold">Search</Form.Label>
@@ -129,79 +216,98 @@ export default function UsersPage() {
                         value={roleFilter}
                         onChange={(e) => setRoleFilter(e.target.value)}
                     >
-                        <option value="all">All roles</option>
+                        <option value="">All roles</option>
                         <option value="admin">Admin</option>
-                        <option value="member">Member</option>
+                        <option value="project_manager">Project Manager</option>
+                        <option value="collaborator">Collaborator</option>
                     </Form.Select>
                 </Col>
             </Row>
 
-            {/* Users Table */}
-            <Table striped bordered hover responsive className="shadow-sm">
-                <thead className="table-dark">
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {FAKE_USERS.map((u) => (
-                        <tr key={u.id}>
-                            <td className="align-middle">{u.name}</td>
-                            <td className="align-middle">{u.email}</td>
+            {/* Loading spinner */}
+            {loading && (
+                <div className="text-center my-5">
+                    <Spinner animation="border" variant="primary" role="status">
+                        <span className="visually-hidden">Loading…</span>
+                    </Spinner>
+                </div>
+            )}
 
-                            <td className="align-middle">
-                                <Badge bg={roleBadgeVariant(u.role)} className="text-capitalize">
-                                    {u.role}
-                                </Badge>
-                            </td>
-
-                            <td className="align-middle">
-                                {u.is_active
-                                    ? <Badge bg="success">Active</Badge>
-                                    : <Badge bg="danger">Inactive</Badge>
-                                }
-                            </td>
-
-                            <td className="align-middle">
-                                <Button
-                                    variant="outline-primary"
-                                    size="sm"
-                                    className="me-2"
-                                    onClick={() => handleEditClick(u)}
-                                >
-                                    Edit
-                                </Button>
-
-                                {/* Now opens the confirm dialog instead of doing nothing */}
-                                <Button
-                                    variant="outline-danger"
-                                    size="sm"
-                                    onClick={() => handleDeactivateClick(u)}
-                                >
-                                    Deactivate
-                                </Button>
-                            </td>
+            {/* Table — only rendered when not loading and no fetch error */}
+            {!loading && !fetchErr && (
+                <Table striped bordered hover responsive className="shadow-sm">
+                    <thead className="table-dark">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </Table>
+                    </thead>
+                    <tbody>
+                        {(users ?? []).length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="text-center text-muted py-4">
+                                    No users found.
+                                </td>
+                            </tr>
+                        ) : (
+                            users.map((u) => (
+                                <tr key={u.id}>
+                                    <td className="align-middle">{u.name}</td>
+                                    <td className="align-middle">{u.email}</td>
 
-            {/* UserFormModal — create or edit */}
+                                    <td className="align-middle">
+                                        <Badge bg={roleBadgeVariant(u.role)}>{roleLabel(u.role)}</Badge>
+                                    </td>
+
+                                    <td className="align-middle">
+                                        {u.is_active
+                                            ? <Badge bg="success">Active</Badge>
+                                            : <Badge bg="danger">Inactive</Badge>
+                                        }
+                                    </td>
+
+                                    <td className="align-middle">
+                                        <Button
+                                            variant="outline-primary"
+                                            size="sm"
+                                            className="me-2"
+                                            onClick={() => handleEditClick(u)}
+                                            disabled={actionLoading}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant="outline-danger"
+                                            size="sm"
+                                            onClick={() => handleDeactivateClick(u)}
+                                            disabled={actionLoading}
+                                        >
+                                            Deactivate
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </Table>
+            )}
+
+            {/* UserFormModal — passes actionLoading so Save button disables too */}
             <UserFormModal
                 show={showModal}
                 onClose={handleModalClose}
                 onSave={handleSave}
                 user={selectedUser}
+                loading={actionLoading}
             />
 
             {/* ConfirmDialog — shown before deactivating */}
             <ConfirmDialog
                 show={showConfirm}
-                message={`Deactivate this user (${userToDeactivate?.name})?`}
+                message={`Deactivate "${userToDeactivate?.name}"? They will no longer be able to log in.`}
                 onConfirm={handleConfirmDeactivate}
                 onClose={handleConfirmClose}
             />
