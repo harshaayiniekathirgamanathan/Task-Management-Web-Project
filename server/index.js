@@ -9,8 +9,10 @@ const http = require('http');
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
+
+// Route files (declare each ONCE)
+const projectRoutes = require('./routes/projectRoutes');
+const taskRoutes = require('./routes/taskRoutes');
 
 const app = express();
 
@@ -22,11 +24,6 @@ app.use(cors({
   origin: process.env.CLIENT_URL,
   credentials: true,
 }));
-
-const projectRoutes = require('./routes/projectRoutes');
-const taskRoutes = require('./routes/taskRoutes');
-
-
 
 // Let the server read JSON sent in request bodies
 app.use(express.json());
@@ -40,21 +37,14 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // The raw spec as JSON
 app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
 
-
-app.use('/api/projects', projectRoutes);
-
 // Health check — a simple way to confirm the server is alive
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// API Routes (mount each ONCE)
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
-
-
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 
 // Start listening for requests
 const server = http.createServer(app); // wrap the Express app
