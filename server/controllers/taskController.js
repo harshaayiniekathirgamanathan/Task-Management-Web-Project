@@ -2,10 +2,12 @@
 // sends the response. No database code here (that lives in the service).
 const taskService = require('../services/taskService');
 
-// GET /api/tasks -> list tasks (scaffold: returns [] for now)
+// GET /api/tasks -> list tasks (with optional filters + sorting from the query string)
 async function listTasks(req, res, next) {
   try {
-    res.json([]);
+    const { project_id, status, priority, assignee, sort } = req.query;
+    const tasks = await taskService.listTasks({ project_id, status, priority, assignee, sort });
+    res.json(tasks);
   } catch (err) {
     next(err);
   }
