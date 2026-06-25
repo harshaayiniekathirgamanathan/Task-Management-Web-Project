@@ -67,17 +67,23 @@ const createUser = async ({ name, email, role }) => {
     }
 
     // Send email, or print to console if no SMTP
+    // Email the temporary password to the NEW USER only.
+    // Flow: admin creates the user -> user gets the temp password by email
+    // -> user logs in with it and is forced to reset. The admin never sees it.
     try {
         await emailService.sendOnboardingEmail(email, name, tempPassword);
     } catch (err) {
-        console.error('Failed to send onboarding email, printing to console instead:');
-        console.log(`User: ${name} (${email}), Temp Password: ${tempPassword}`);
+        // Don't fail the request if email is down; log it, but never leak the
+        // password in production logs.
+        console.error(`Onboarding email to ${email} failed: ${err.message}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[dev] Temp password for ${email}: ${tempPassword}`);
+        }
     }
 
-    return {
-        user: newUser,
-        tempPassword
-    };
+    // Return ONLY the user (contract: 201 {id,name,email,role,...}).
+    // The temp password is intentionally NOT returned — it goes to the inbox.
+    return newUser;
 };
 
 const updateUser = async (id, { name, role }) => {
