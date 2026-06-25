@@ -102,4 +102,13 @@ router.patch(
   taskController.updateTaskStatus
 );
 
+// DELETE /api/tasks/:id -> delete a task (managers/admins only)
+router.delete(
+  '/:id',
+  requireRole('project_manager', 'admin'), // collaborator -> 403
+  [param('id').isUUID().withMessage('Invalid task id')],
+  validate,
+  taskController.deleteTask
+);
+
 module.exports = router;
