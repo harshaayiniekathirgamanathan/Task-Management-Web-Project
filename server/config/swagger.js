@@ -22,7 +22,7 @@ const options = {
   },
   // Read the @swagger comments your teammates write above each route.
   // Absolute path so it works no matter which folder you start the server from.
-  apis: [path.join(__dirname, '../routes/*.js')],
+  apis: [path.join(__dirname, '../routes/*.js').replace(/\\/g, '/')],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

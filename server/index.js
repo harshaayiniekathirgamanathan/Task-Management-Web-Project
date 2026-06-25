@@ -1,4 +1,4 @@
-// Load environment variables from .env first, before anything else
+// Load environment variables from .env first
 require('dotenv').config();
 
 const express = require('express');
@@ -11,39 +11,52 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-
-// Route files (declare each ONCE)
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
-
 const errorHandler = require('./middleware/errorHandler');
-
+const commentRoutes = require('./routes/commentRoutes');
+const labelRoutes = require('./routes/labelRoutes');
+const attachmentRoutes = require('./routes/attachmentRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const { startDeadlineReminderJob } = require('./jobs/deadlineReminders');
 const app = express();
 
-// Add safe security headers to every response
+// Security headers
 app.use(helmet());
 
-// Allow our React frontend to call this API (and send cookies)
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,
-}));
+// CORS
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  })
+);
 
-// Let the server read JSON sent in request bodies
+// Parse JSON request body
 app.use(express.json());
 
-// Let the server read cookies (used later for the refresh token)
+// Parse cookies
 app.use(cookieParser());
 
-// Interactive API docs (the web page)
+// API Routes
+app.use('/api', commentRoutes);
+app.use('/api', labelRoutes);
+app.use('/api', attachmentRoutes);
+app.use('/api', notificationRoutes);
+
+// Swagger Documentation
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// The raw spec as JSON
-app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
+// Swagger JSON
+app.get('/api/docs.json', (req, res) => {
+  res.json(swaggerSpec);
+});
 
-// Health check — a simple way to confirm the server is alive
+// Health Check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+  });
 });
 
 // API Routes (mount each ONCE)
@@ -56,10 +69,13 @@ app.use('/api/users', userRoutes);
 app.use(errorHandler);
 
 // Start listening for requests
-const server = http.createServer(app); // wrap the Express app
-initSocket(server);                     // attach Socket.IO to it
+const server = http.createServer(app);
+initSocket(server);
+startDeadlineReminderJob();
 
 const PORT = process.env.PORT || 8000;
+
+// Start Server
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
