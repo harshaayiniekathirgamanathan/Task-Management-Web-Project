@@ -1,5 +1,6 @@
 // Service for tasks — ALL Supabase database work for tasks lives here.
 const supabase = require('../utils/supabase');
+const { createNotification } = require('./notificationService');
 
 // Turn a raw task row (with embedded join tables) into the API contract shape.
 function toTaskShape(row) {
@@ -180,6 +181,20 @@ async function createTask({
       throw err;
     }
   }
+    // Step 4.9 — notify each assigned user (skip the creator)
+  for (const userId of uniqueAssignees) {
+    if (userId === created_by) continue;
+    try {
+      await createNotification(
+        userId,
+        'task_assigned',
+        `You were assigned to the task "${title}"`,
+        task.id
+      );
+    } catch (e) {
+      console.error('task_assigned notification failed:', e.message);
+    }
+  }
 
   return getTaskById(task.id);
 }
@@ -281,12 +296,22 @@ async function updateTaskStatus(id, status, user) {
     throw err;
   }
 
-  // notifications hook here
-  // Member 4: the task's status just changed — fire a "status changed"
-  // notification to the task's assignees here (e.g. notifyStatusChange(id, status, user.id)).
+  const updatedTask = await getTaskById(id);
+  for (const assignee of updatedTask.assignees) {
+    if (assignee.id === user.id) continue; // don't notify the person who changed it
+    try {
+      await createNotification(
+        assignee.id,
+        'status_changed',
+        `Task "${updatedTask.title}" is now ${status}`,
+        id
+      );
+    } catch (e) {
+      console.error('status_changed notification failed:', e.message);
+    }
+  }
 
-  // 4. Return the full updated task
-  return getTaskById(id);
+  return updatedTask;
 }
 
 // Delete a task (managers only — enforced in the route).
