@@ -197,8 +197,6 @@ async function createTask({
   }
 
   return getTaskById(task.id);
-
-  return getTaskById(task.id);
 }
 
 // Update a task's title/description/priority/due_date/assignee_ids (managers only — enforced in the route).
