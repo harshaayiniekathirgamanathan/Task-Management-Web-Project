@@ -289,10 +289,31 @@ async function updateTaskStatus(id, status, user) {
   return getTaskById(id);
 }
 
+// Delete a task (managers only — enforced in the route).
+// task_assignments and task_labels are removed automatically (ON DELETE CASCADE).
+// Returns the deleted row ({ id }) so the caller knows it existed, or null if not found.
+async function deleteTask(id) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    const err = new Error(error.message);
+    err.status = 500;
+    throw err;
+  }
+
+  return data; // { id } if a row was deleted, or null
+}
+
 module.exports = {
   listTasks,
   createTask,
   getTaskById,
   updateTask,
   updateTaskStatus,
+  deleteTask,
 };
