@@ -1,14 +1,33 @@
 // Service for tasks — ALL Supabase database work for tasks lives here.
 const supabase = require('../utils/supabase');
 
-// Helper: fetch one task with its assignees joined in as [{ id, name }].
-// Uses the task_assignments junction table to reach the users table.
+// Turn a raw task row (with embedded join tables) into the API contract shape.
+function toTaskShape(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    due_date: row.due_date,
+    // task_assignments: [{ users: {id,name} }] -> assignees: [{id,name}]
+    assignees: (row.task_assignments || []).map((a) => a.users),
+    // task_labels: [{ labels: {id,name,color} }] -> labels: [{id,name,color}]
+    labels: (row.task_labels || []).map((l) => l.labels),
+  };
+}
+
+// The columns + joins we select for the full task shape.
+const TASK_SELECT =
+  'id, title, description, priority, status, due_date, ' +
+  'task_assignments ( users ( id, name ) ), ' +
+  'task_labels ( labels ( id, name, color ) )';
+
+// Helper: fetch one task with its assignees + labels joined in.
 async function getTaskWithAssignees(taskId) {
   const { data, error } = await supabase
     .from('tasks')
-    .select(
-      'id, project_id, title, description, priority, status, due_date, created_by, created_at, task_assignments ( users ( id, name ) )'
-    )
+    .select(TASK_SELECT)
     .eq('id', taskId)
     .maybeSingle();
 
@@ -19,12 +38,54 @@ async function getTaskWithAssignees(taskId) {
   }
 
   if (!data) return null;
+  return toTaskShape(data);
+}
 
-  // Flatten task_assignments: [{ users: {id,name} }] -> assignees: [{id,name}]
-  const assignees = (data.task_assignments || []).map((row) => row.users);
-  delete data.task_assignments;
+// List tasks with optional filters and sorting.
+// Returns each task in the contract shape (with assignees + labels).
+async function listTasks({ project_id, status, priority, assignee, sort } = {}) {
+  // If filtering by assignee, first find which tasks that user is on.
+  let assignedTaskIds = null;
+  if (assignee) {
+    const { data: rows, error: aErr } = await supabase
+      .from('task_assignments')
+      .select('task_id')
+      .eq('user_id', assignee);
 
-  return { ...data, assignees };
+    if (aErr) {
+      const err = new Error(aErr.message);
+      err.status = 500;
+      throw err;
+    }
+    assignedTaskIds = rows.map((r) => r.task_id);
+    if (assignedTaskIds.length === 0) return []; // user is on no tasks -> nothing to return
+  }
+
+  // Build the main query
+  let query = supabase.from('tasks').select(TASK_SELECT);
+
+  if (project_id) query = query.eq('project_id', project_id);
+  if (status) query = query.eq('status', status);
+  if (priority) query = query.eq('priority', priority);
+  if (assignedTaskIds) query = query.in('id', assignedTaskIds);
+
+  // Sorting
+  if (sort === 'due_date') {
+    query = query.order('due_date', { ascending: true, nullsFirst: false }); // soonest first
+  } else if (sort === 'priority') {
+    query = query.order('priority', { ascending: false }); // high -> medium -> low (enum order)
+  } else {
+    query = query.order('created_at', { ascending: false }); // default: newest first
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    const err = new Error(error.message);
+    err.status = 500;
+    throw err;
+  }
+
+  return data.map(toTaskShape);
 }
 
 // Create one task, optionally assigning users to it.
@@ -55,9 +116,7 @@ async function createTask({
     throw err;
   }
 
-  // 2. Every assignee must be a real user.
-  //    We check BEFORE inserting the task, so a bad id never leaves an
-  //    orphan task behind (Supabase has no easy multi-step transaction here).
+  // 2. Every assignee must be a real user (checked before inserting the task)
   const uniqueAssignees = [...new Set(assignee_ids)];
   if (uniqueAssignees.length > 0) {
     const { data: users, error: usersError } = await supabase
@@ -70,7 +129,6 @@ async function createTask({
       err.status = 500;
       throw err;
     }
-    // If fewer rows came back than ids we asked for, at least one is unknown
     if (users.length !== uniqueAssignees.length) {
       const err = new Error('Unknown user assigned');
       err.status = 400;
@@ -113,11 +171,12 @@ async function createTask({
     }
   }
 
-  // 5. Return the task with its assignees joined in
+  // 5. Return the task with assignees + labels joined in
   return getTaskWithAssignees(task.id);
 }
 
 module.exports = {
+  listTasks,
   createTask,
   getTaskWithAssignees,
 };
