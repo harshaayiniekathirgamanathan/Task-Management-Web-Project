@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Row, Col } from 'react-bootstrap';
 import TaskCard from './TaskCard';
 import TaskDetailModal from './TaskDetailModal';
 
-const TaskBoard = ({ tasks = [], onStatusChange }) => {
+const TaskBoard = ({ tasks = [], projectId, onStatusChange, onTaskUpdated }) => {
     const [selectedTask, setSelectedTask] = useState(null);
 
     const todoTasks = tasks.filter(task => task.status === 'todo');
@@ -18,6 +18,15 @@ const TaskBoard = ({ tasks = [], onStatusChange }) => {
         setSelectedTask(task);
     };
 
+    useEffect(() => {
+        if (!selectedTask) return;
+
+        const refreshedTask = tasks.find(task => task.id === selectedTask.id);
+
+        if (refreshedTask) {
+            setSelectedTask(refreshedTask);
+        }
+    }, [tasks, selectedTask]);
 
     const renderTaskCard = (task) => (
         <TaskCard
@@ -80,6 +89,8 @@ const TaskBoard = ({ tasks = [], onStatusChange }) => {
             <TaskDetailModal
                 show={Boolean(selectedTask)}
                 task={selectedTask}
+                projectId={projectId}
+                onTaskUpdated={onTaskUpdated}
                 onClose={() => setSelectedTask(null)}
             />
         </>

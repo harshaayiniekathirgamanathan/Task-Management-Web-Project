@@ -40,9 +40,12 @@ const ProjectDetailPage = () => {
         priority: ''
     });
 
-    const loadTasks = async () => {
+    const loadTasks = async (showSpinner = true) => {
         try {
-            setLoading(true);
+            if (showSpinner) {
+                setLoading(true);
+            }
+
             setError('');
 
             const params = {
@@ -63,7 +66,9 @@ const ProjectDetailPage = () => {
             console.error('Failed to load tasks:', err);
             setError('Could not load tasks. Please check the backend.');
         } finally {
-            setLoading(false);
+            if (showSpinner) {
+                setLoading(false);
+            }
         }
     };
     const loadUsers = async () => {
@@ -244,7 +249,9 @@ const ProjectDetailPage = () => {
             ) : view === 'board' ? (
                 <TaskBoard
                     tasks={tasks}
+                    projectId={id}
                     onStatusChange={handleStatusChange}
+                    onTaskUpdated={() => loadTasks(false)}
                 />
             ) : (
                 <TaskTable tasks={tasks} />
