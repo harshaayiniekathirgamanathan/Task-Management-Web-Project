@@ -1,46 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container, Row, Col,
     Card, Button,
-    Modal, Form
+    Modal, Form,
+    Spinner, Alert
 } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-
-// Hard-coded fake projects matching the API contract
-// Shape: { id, title, description, created_at }
-const FAKE_PROJECTS = [
-    {
-        id: '1',
-        title: 'Website Redesign',
-        description: 'Redesign the company website with a modern look and feel.',
-        created_at: '2024-01-15T08:00:00Z',
-    },
-    {
-        id: '2',
-        title: 'Mobile App MVP',
-        description: 'Build the first version of the iOS and Android app.',
-        created_at: '2024-02-20T10:00:00Z',
-    },
-    {
-        id: '3',
-        title: 'API Integration',
-        description: 'Connect the dashboard to third-party analytics services.',
-        created_at: '2024-03-05T09:30:00Z',
-    },
-];
+import { useAuth } from '../context/AuthContext';
+import { listProjects, createProject } from '../api/projects';
 
 export default function ProjectsPage() {
     const navigate = useNavigate();
+    const { user } = useAuth(); // needed to check role for the button
+
+    // --- Data state ---
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [fetchErr, setFetchErr] = useState('');
+
+    // --- Action feedback ---
+    const [actionMsg, setActionMsg] = useState('');
+    const [actionErr, setActionErr] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
 
     // --- New project modal state ---
     const [showModal, setShowModal] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
 
+    // Fetch projects on first render
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
+    async function fetchProjects() {
+        setLoading(true);
+        setFetchErr('');
+        try {
+            const data = await listProjects();
+            // Handle both { data: [...] } and a bare array response shape
+            const list = Array.isArray(data?.data) ? data.data
+                : Array.isArray(data) ? data
+                    : [];
+            setProjects(list);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to load projects. Please try again.';
+            setFetchErr(msg);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // ---- Modal handlers ----
     function handleOpenModal() {
-        // Reset fields every time the modal opens
         setTitle('');
         setDescription('');
+        setActionMsg('');
+        setActionErr('');
         setShowModal(true);
     }
 
@@ -48,67 +64,121 @@ export default function ProjectsPage() {
         setShowModal(false);
     }
 
-    function handleSave() {
-        // For now just log — swap for a real POST /api/projects call later
-        console.log('New project:', { title, description });
-        handleCloseModal();
+    async function handleSave() {
+        // Basic client-side check
+        if (!title.trim()) {
+            setActionErr('Project title is required.');
+            return;
+        }
+
+        setActionLoading(true);
+        setActionErr('');
+        try {
+            await createProject({ title, description });
+            setActionMsg(`Project "${title}" created successfully.`);
+            handleCloseModal();
+            fetchProjects(); // refresh the cards grid
+        } catch (err) {
+            const serverMsg = err.response?.data?.message || 'Failed to create project.';
+            setActionErr(serverMsg);
+            // Keep modal open so the user can correct the input
+        } finally {
+            setActionLoading(false);
+        }
     }
+
+    // Only admin or project_manager roles may create projects
+    const canCreate = user?.role === 'admin' || user?.role === 'project_manager';
 
     return (
         <Container className="py-4">
-            {/* Page heading + New project button */}
+            {/* Heading + New Project button (role-gated) */}
             <Row className="mb-4 align-items-center">
                 <Col>
                     <h2 className="fw-bold mb-0">Projects</h2>
                 </Col>
-                <Col xs="auto">
-                    <Button variant="primary" onClick={handleOpenModal}>
-                        + New Project
-                    </Button>
-                </Col>
+                {canCreate && (
+                    <Col xs="auto">
+                        <Button variant="primary" onClick={handleOpenModal} disabled={actionLoading}>
+                            + New Project
+                        </Button>
+                    </Col>
+                )}
             </Row>
+
+            {/* Success banner */}
+            {actionMsg && (
+                <Alert variant="success" onClose={() => setActionMsg('')} dismissible className="mb-3">
+                    {actionMsg}
+                </Alert>
+            )}
+
+            {/* Fetch error banner */}
+            {fetchErr && (
+                <Alert variant="danger" onClose={() => setFetchErr('')} dismissible className="mb-3">
+                    {fetchErr}
+                </Alert>
+            )}
+
+            {/* Loading spinner */}
+            {loading && (
+                <div className="text-center my-5">
+                    <Spinner animation="border" variant="primary" role="status">
+                        <span className="visually-hidden">Loading…</span>
+                    </Spinner>
+                </div>
+            )}
+
+            {/* Empty state */}
+            {!loading && !fetchErr && projects.length === 0 && (
+                <p className="text-muted text-center mt-5">No projects yet.</p>
+            )}
 
             {/* Project cards grid */}
-            <Row className="g-4">
-                {FAKE_PROJECTS.map((project) => (
-                    <Col key={project.id} xs={12} md={6} lg={4}>
-                        <Card className="h-100 shadow-sm border-0 rounded-4">
-                            <Card.Body className="d-flex flex-column">
-                                {/* Project title */}
-                                <Card.Title className="fw-bold">{project.title}</Card.Title>
+            {!loading && !fetchErr && projects.length > 0 && (
+                <Row className="g-4">
+                    {projects.map((project) => (
+                        <Col key={project.id} xs={12} md={6} lg={4}>
+                            <Card className="h-100 shadow-sm border-0 rounded-4">
+                                <Card.Body className="d-flex flex-column">
+                                    <Card.Title className="fw-bold">{project.title}</Card.Title>
 
-                                {/* Description — grows to fill available space */}
-                                <Card.Text className="text-muted flex-grow-1">
-                                    {project.description}
-                                </Card.Text>
+                                    <Card.Text className="text-muted flex-grow-1">
+                                        {project.description}
+                                    </Card.Text>
 
-                                {/* Created date — small text above the button */}
-                                <Card.Text className="text-muted small mb-3">
-                                    Created: {new Date(project.created_at).toLocaleDateString()}
-                                </Card.Text>
+                                    <Card.Text className="text-muted small mb-3">
+                                        Created: {new Date(project.created_at).toLocaleDateString()}
+                                    </Card.Text>
 
-                                {/* Open button — navigates to the project detail page */}
-                                <Button
-                                    variant="outline-primary"
-                                    onClick={() => navigate(`/projects/${project.id}`)}
-                                >
-                                    Open
-                                </Button>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                ))}
-            </Row>
+                                    <Button
+                                        variant="outline-primary"
+                                        onClick={() => navigate(`/projects/${project.id}`)}
+                                    >
+                                        Open
+                                    </Button>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
+            )}
 
-            {/* ---- New Project Modal ---- */}
+            {/* New Project Modal */}
             <Modal show={showModal} onHide={handleCloseModal} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>New Project</Modal.Title>
                 </Modal.Header>
 
                 <Modal.Body>
+                    {/* Server/validation error inside the modal */}
+                    {actionErr && (
+                        <Alert variant="danger" className="mb-3">
+                            {actionErr}
+                        </Alert>
+                    )}
+
                     <Form onSubmit={(e) => e.preventDefault()}>
-                        {/* Title */}
                         <Form.Group className="mb-3" controlId="projectTitle">
                             <Form.Label className="fw-semibold">Title</Form.Label>
                             <Form.Control
@@ -119,7 +189,6 @@ export default function ProjectsPage() {
                             />
                         </Form.Group>
 
-                        {/* Description */}
                         <Form.Group controlId="projectDescription">
                             <Form.Label className="fw-semibold">Description</Form.Label>
                             <Form.Control
@@ -134,11 +203,11 @@ export default function ProjectsPage() {
                 </Modal.Body>
 
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={handleCloseModal}>
+                    <Button variant="secondary" onClick={handleCloseModal} disabled={actionLoading}>
                         Cancel
                     </Button>
-                    <Button variant="primary" onClick={handleSave}>
-                        Create Project
+                    <Button variant="primary" onClick={handleSave} disabled={actionLoading}>
+                        {actionLoading ? 'Creating…' : 'Create Project'}
                     </Button>
                 </Modal.Footer>
             </Modal>

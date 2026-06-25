@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { changePassword as changePasswordApi } from '../api/auth'; // <-- real API call
 
 export default function ChangePasswordPage() {
-    // Controlled state for the three fields
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -11,32 +12,51 @@ export default function ChangePasswordPage() {
     const [status, setStatus] = useState(null);
     const [message, setMessage] = useState('');
 
-    function handleSubmit(e) {
+    // Disables the button while the request is in-flight
+    const [loading, setLoading] = useState(false);
+
+    const navigate = useNavigate();
+
+    async function handleSubmit(e) {
         e.preventDefault();
 
-        // --- Basic validation ---
+        // --- Client-side validation first (no need to hit the server) ---
         if (!currentPassword || !newPassword || !confirmPassword) {
             setStatus('error');
             setMessage('Please fill in all three fields.');
             return;
         }
 
-        // New password and confirm must match
         if (newPassword !== confirmPassword) {
             setStatus('error');
             setMessage('New password and confirm password do not match.');
             return;
         }
 
-        // --- FAKE SUBMIT (swap for real API call later) ---
-        // At this point we would POST to /api/auth/change-password
-        setStatus('success');
-        setMessage('Password changed successfully!');
+        setStatus(null);
+        setLoading(true);
 
-        // Clear the fields after success
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        try {
+            // --- REAL API CALL ---
+            await changePasswordApi(currentPassword, newPassword);
+
+            // Show a success message briefly, then redirect to the dashboard
+            setStatus('success');
+            setMessage('Password changed successfully! Redirecting…');
+
+            // Give the user 1.5 seconds to read the success message before redirect
+            setTimeout(() => navigate('/'), 1500);
+
+        } catch (err) {
+            // 400 = weak password (or wrong current password) — show server message
+            // Any other error falls back to a generic message
+            const serverMessage =
+                err.response?.data?.message || 'Something went wrong. Please try again.';
+            setStatus('error');
+            setMessage(serverMessage);
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -58,7 +78,7 @@ export default function ChangePasswordPage() {
                                 </Alert>
                             )}
 
-                            {/* Password rules — shown as a helpful note */}
+                            {/* Password rules note */}
                             <Alert variant="info" className="small">
                                 <strong>Password rules:</strong>
                                 <ul className="mb-0 mt-1">
@@ -106,8 +126,14 @@ export default function ChangePasswordPage() {
                                     />
                                 </Form.Group>
 
-                                <Button variant="primary" type="submit" className="w-100 mt-3 py-2 fw-semibold shadow-sm">
-                                    Change Password
+                                {/* Button disabled while request is in-flight */}
+                                <Button
+                                    variant="primary"
+                                    type="submit"
+                                    className="w-100 mt-3 py-2 fw-semibold shadow-sm"
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Saving…' : 'Change Password'}
                                 </Button>
                             </Form>
                         </Card.Body>
