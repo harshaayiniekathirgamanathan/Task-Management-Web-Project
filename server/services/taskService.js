@@ -10,21 +10,18 @@ function toTaskShape(row) {
     priority: row.priority,
     status: row.status,
     due_date: row.due_date,
-    // task_assignments: [{ users: {id,name} }] -> assignees: [{id,name}]
     assignees: (row.task_assignments || []).map((a) => a.users),
-    // task_labels: [{ labels: {id,name,color} }] -> labels: [{id,name,color}]
     labels: (row.task_labels || []).map((l) => l.labels),
   };
 }
 
-// The columns + joins we select for the full task shape.
 const TASK_SELECT =
   'id, title, description, priority, status, due_date, ' +
   'task_assignments ( users ( id, name ) ), ' +
   'task_labels ( labels ( id, name, color ) )';
 
-// Helper: fetch one task with its assignees + labels joined in.
-async function getTaskWithAssignees(taskId) {
+// Get one full task by id (assignees + labels joined). Returns null if not found.
+async function getTaskById(taskId) {
   const { data, error } = await supabase
     .from('tasks')
     .select(TASK_SELECT)
@@ -41,10 +38,45 @@ async function getTaskWithAssignees(taskId) {
   return toTaskShape(data);
 }
 
+// Is this user assigned to this task? (true/false)
+async function isUserAssigned(taskId, userId) {
+  const { data, error } = await supabase
+    .from('task_assignments')
+    .select('task_id')
+    .eq('task_id', taskId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    const err = new Error(error.message);
+    err.status = 500;
+    throw err;
+  }
+  return !!data;
+}
+
+// Confirm a list of ids are all real users (else throw 400).
+async function assertUsersExist(uniqueIds) {
+  if (uniqueIds.length === 0) return;
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('id')
+    .in('id', uniqueIds);
+
+  if (error) {
+    const err = new Error(error.message);
+    err.status = 500;
+    throw err;
+  }
+  if (users.length !== uniqueIds.length) {
+    const err = new Error('Unknown user assigned');
+    err.status = 400;
+    throw err;
+  }
+}
+
 // List tasks with optional filters and sorting.
-// Returns each task in the contract shape (with assignees + labels).
 async function listTasks({ project_id, status, priority, assignee, sort } = {}) {
-  // If filtering by assignee, first find which tasks that user is on.
   let assignedTaskIds = null;
   if (assignee) {
     const { data: rows, error: aErr } = await supabase
@@ -58,10 +90,9 @@ async function listTasks({ project_id, status, priority, assignee, sort } = {}) 
       throw err;
     }
     assignedTaskIds = rows.map((r) => r.task_id);
-    if (assignedTaskIds.length === 0) return []; // user is on no tasks -> nothing to return
+    if (assignedTaskIds.length === 0) return [];
   }
 
-  // Build the main query
   let query = supabase.from('tasks').select(TASK_SELECT);
 
   if (project_id) query = query.eq('project_id', project_id);
@@ -69,13 +100,12 @@ async function listTasks({ project_id, status, priority, assignee, sort } = {}) 
   if (priority) query = query.eq('priority', priority);
   if (assignedTaskIds) query = query.in('id', assignedTaskIds);
 
-  // Sorting
   if (sort === 'due_date') {
-    query = query.order('due_date', { ascending: true, nullsFirst: false }); // soonest first
+    query = query.order('due_date', { ascending: true, nullsFirst: false });
   } else if (sort === 'priority') {
-    query = query.order('priority', { ascending: false }); // high -> medium -> low (enum order)
+    query = query.order('priority', { ascending: false });
   } else {
-    query = query.order('created_at', { ascending: false }); // default: newest first
+    query = query.order('created_at', { ascending: false });
   }
 
   const { data, error } = await query;
@@ -98,7 +128,6 @@ async function createTask({
   assignee_ids = [],
   created_by,
 }) {
-  // 1. The project must exist
   const { data: project, error: projectError } = await supabase
     .from('projects')
     .select('id')
@@ -116,27 +145,9 @@ async function createTask({
     throw err;
   }
 
-  // 2. Every assignee must be a real user (checked before inserting the task)
   const uniqueAssignees = [...new Set(assignee_ids)];
-  if (uniqueAssignees.length > 0) {
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id')
-      .in('id', uniqueAssignees);
+  await assertUsersExist(uniqueAssignees);
 
-    if (usersError) {
-      const err = new Error(usersError.message);
-      err.status = 500;
-      throw err;
-    }
-    if (users.length !== uniqueAssignees.length) {
-      const err = new Error('Unknown user assigned');
-      err.status = 400;
-      throw err;
-    }
-  }
-
-  // 3. Insert the task (status starts as 'todo')
   const { data: task, error } = await supabase
     .from('tasks')
     .insert({
@@ -157,7 +168,6 @@ async function createTask({
     throw err;
   }
 
-  // 4. Insert one task_assignments row per assignee
   if (uniqueAssignees.length > 0) {
     const rows = uniqueAssignees.map((user_id) => ({ task_id: task.id, user_id }));
     const { error: assignError } = await supabase
@@ -171,12 +181,118 @@ async function createTask({
     }
   }
 
-  // 5. Return the task with assignees + labels joined in
-  return getTaskWithAssignees(task.id);
+  return getTaskById(task.id);
+}
+
+// Update a task's title/description/priority/due_date/assignee_ids (managers only — enforced in the route).
+async function updateTask(id, { title, description, priority, due_date, assignee_ids }) {
+  const { data: existing, error: existErr } = await supabase
+    .from('tasks')
+    .select('id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (existErr) {
+    const err = new Error(existErr.message);
+    err.status = 500;
+    throw err;
+  }
+  if (!existing) return null;
+
+  let uniqueAssignees = null;
+  if (assignee_ids !== undefined) {
+    uniqueAssignees = [...new Set(assignee_ids)];
+    await assertUsersExist(uniqueAssignees);
+  }
+
+  const patch = { updated_at: new Date().toISOString() };
+  if (title !== undefined) patch.title = title;
+  if (description !== undefined) patch.description = description;
+  if (priority !== undefined) patch.priority = priority;
+  if (due_date !== undefined) patch.due_date = due_date;
+
+  const { error: updErr } = await supabase.from('tasks').update(patch).eq('id', id);
+  if (updErr) {
+    const err = new Error(updErr.message);
+    err.status = 500;
+    throw err;
+  }
+
+  if (uniqueAssignees !== null) {
+    const { error: delErr } = await supabase.from('task_assignments').delete().eq('task_id', id);
+    if (delErr) {
+      const err = new Error(delErr.message);
+      err.status = 500;
+      throw err;
+    }
+    if (uniqueAssignees.length > 0) {
+      const rows = uniqueAssignees.map((user_id) => ({ task_id: id, user_id }));
+      const { error: insErr } = await supabase.from('task_assignments').insert(rows);
+      if (insErr) {
+        const err = new Error(insErr.message);
+        err.status = 500;
+        throw err;
+      }
+    }
+  }
+
+  return getTaskById(id);
+}
+
+// Change ONLY a task's status.
+// Managers/admins may change any task; a collaborator may change it ONLY
+// if they are assigned to that task. `user` is { id, role } from the token.
+// Returns the updated task, or null if the task does not exist (-> 404).
+async function updateTaskStatus(id, status, user) {
+  // 1. Task must exist
+  const { data: existing, error: existErr } = await supabase
+    .from('tasks')
+    .select('id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (existErr) {
+    const err = new Error(existErr.message);
+    err.status = 500;
+    throw err;
+  }
+  if (!existing) return null; // -> 404
+
+  // 2. Permission: managers/admins always; collaborators only if assigned
+  const isManager = user.role === 'project_manager' || user.role === 'admin';
+  if (!isManager) {
+    const assigned = await isUserAssigned(id, user.id);
+    if (!assigned) {
+      const err = new Error('Forbidden');
+      err.status = 403;
+      throw err;
+    }
+  }
+
+  // 3. Update the status
+  const { error: updErr } = await supabase
+    .from('tasks')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (updErr) {
+    const err = new Error(updErr.message);
+    err.status = 500;
+    throw err;
+  }
+
+  // notifications hook here
+  // Member 4: the task's status just changed — fire a "status changed"
+  // notification to the task's assignees here (e.g. notifyStatusChange(id, status, user.id)).
+
+  // 4. Return the full updated task
+  return getTaskById(id);
 }
 
 module.exports = {
   listTasks,
   createTask,
-  getTaskWithAssignees,
+  getTaskById,
+  updateTask,
+  updateTaskStatus,
 };
