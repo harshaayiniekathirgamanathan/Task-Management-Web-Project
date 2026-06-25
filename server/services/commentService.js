@@ -5,7 +5,7 @@ const { createNotification } = require('./notificationService');
 async function listComments(taskId) {
   const { data, error } = await supabase
     .from('comments')
-    .select('*')
+    .select('id, content, created_at, author:users ( id, name )')
     .eq('task_id', taskId)
     .order('created_at', { ascending: true });
 
