@@ -14,13 +14,14 @@ async function listTasks(req, res, next) {
 // POST /api/tasks -> create a task (project_manager/admin only)
 async function createTask(req, res, next) {
   try {
-    const { project_id, title, description, priority, due_date } = req.body;
+    const { project_id, title, description, priority, due_date, assignee_ids } = req.body;
     const task = await taskService.createTask({
       project_id,
       title,
       description,
       priority,
       due_date,
+      assignee_ids,
       created_by: req.user.id, // who is logged in (set by authMiddleware)
     });
     res.status(201).json(task);
