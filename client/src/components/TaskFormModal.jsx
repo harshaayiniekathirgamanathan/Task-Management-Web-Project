@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
-// Fake users list just for our dropdown testing
-const FAKE_USERS = [
-    { id: 101, name: 'Alice Smith' },
-    { id: 102, name: 'Bob Jones' },
-    { id: 103, name: 'Charlie Brown' }
-];
 
-const TaskFormModal = ({ show, onClose, onSave, task }) => {
+const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
     // State to hold everything the user types
     const [formData, setFormData] = useState({
         title: '',
@@ -123,7 +117,7 @@ const TaskFormModal = ({ show, onClose, onSave, task }) => {
                             value={formData.assignees}
                             onChange={handleAssigneesChange}
                         >
-                            {FAKE_USERS.map(user => (
+                            {users.map(user => (
                                 <option key={user.id} value={user.id}>
                                     {user.name}
                                 </option>

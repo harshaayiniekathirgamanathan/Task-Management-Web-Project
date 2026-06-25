@@ -3,7 +3,7 @@ import { Row, Col } from 'react-bootstrap';
 import TaskCard from './TaskCard';
 import TaskDetailModal from './TaskDetailModal';
 
-const TaskBoard = ({ tasks = [] }) => {
+const TaskBoard = ({ tasks = [], onStatusChange }) => {
     const [selectedTask, setSelectedTask] = useState(null);
 
     const todoTasks = tasks.filter(task => task.status === 'todo');
@@ -18,16 +18,13 @@ const TaskBoard = ({ tasks = [] }) => {
         setSelectedTask(task);
     };
 
-    const handleStatusChange = (taskId, newStatus) => {
-        console.log('Status changed:', taskId, newStatus);
-    };
 
     const renderTaskCard = (task) => (
         <TaskCard
             key={task.id}
             task={task}
             onOpen={handleOpenTask}
-            onStatusChange={handleStatusChange}
+           onStatusChange={onStatusChange}
         />
     );
 

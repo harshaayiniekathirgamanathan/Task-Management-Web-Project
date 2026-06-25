@@ -12,7 +12,8 @@ import {
 } from 'react-bootstrap';
 
 import { useAuth } from '../context/AuthContext';
-import { listTasks } from '../api/tasks';
+import { changeStatus, createTask, listTasks, updateTask } from '../api/tasks';
+import { listUsers } from '../api/users';
 import TaskBoard from '../components/TaskBoard';
 import TaskTable from '../components/TaskTable';
 import TaskFormModal from '../components/TaskFormModal';
@@ -26,10 +27,13 @@ const ProjectDetailPage = () => {
 
     const [view, setView] = useState('board');
     const [showModal, setShowModal] = useState(false);
+    const [editingTask, setEditingTask] = useState(null);
 
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [users, setUsers] = useState([]);
 
     const [filters, setFilters] = useState({
         status: '',
@@ -62,10 +66,28 @@ const ProjectDetailPage = () => {
             setLoading(false);
         }
     };
+    const loadUsers = async () => {
+    try {
+        const data = await listUsers();
+
+        // The backend may return either { data: [...] } or just [...]
+        if (Array.isArray(data)) {
+            setUsers(data);
+        } else {
+            setUsers(data.data || []);
+        }
+    } catch (err) {
+        console.error('Failed to load users:', err);
+        setError('Could not load users. Please check the backend.');
+    }
+};
 
     useEffect(() => {
         loadTasks();
     }, [id, filters.status, filters.priority]);
+    useEffect(() => {
+    loadUsers();
+}, []);
 
     const handleFilterChange = (name, value) => {
         setFilters(previousFilters => ({
@@ -73,6 +95,57 @@ const ProjectDetailPage = () => {
             [name]: value
         }));
     };
+
+    const handleSaveTask = async (formData) => {
+    try {
+        setError('');
+        setSuccess('');
+
+        const payload = {
+            title: formData.title,
+            description: formData.description,
+            priority: formData.priority,
+            assignee_ids: formData.assignees
+        };
+
+        if (formData.due_date) {
+            payload.due_date = formData.due_date;
+        }
+
+        if (editingTask) {
+            await updateTask(editingTask.id, payload);
+            setSuccess('Task updated successfully.');
+        } else {
+            await createTask({
+                ...payload,
+                project_id: id
+            });
+            setSuccess('Task created successfully.');
+        }
+
+        setShowModal(false);
+        setEditingTask(null);
+        loadTasks();
+    } catch (err) {
+        console.error('Failed to save task:', err);
+        setError(err.response?.data?.message || 'Could not save task.');
+    }
+};
+
+    const handleStatusChange = async (taskId, newStatus) => {
+    try {
+        setError('');
+        setSuccess('');
+
+        await changeStatus(taskId, newStatus);
+
+        setSuccess('Task status updated successfully.');
+        loadTasks();
+    } catch (err) {
+        console.error('Failed to change status:', err);
+        setError(err.response?.data?.message || 'Could not change task status.');
+    }
+};
 
     return (
         <Container className="mt-4">
@@ -93,12 +166,18 @@ const ProjectDetailPage = () => {
                     >
                         Table
                     </Button>
-                </ButtonGroup>
+                            </ButtonGroup>
 
-                {canCreateTask && (
-                    <Button variant="success" onClick={() => setShowModal(true)}>
-                        + New Task
-                    </Button>
+                            {canCreateTask && (
+                            <Button
+                variant="success"
+                onClick={() => {
+                    setEditingTask(null);
+                    setShowModal(true);
+                }}
+            >
+                + New Task
+            </Button>
                 )}
             </div>
 
@@ -151,6 +230,11 @@ const ProjectDetailPage = () => {
                     {error}
                 </Alert>
             )}
+            {success && (
+            <Alert variant="success">
+                {success}
+            </Alert>
+        )}
 
             {loading ? (
                 <div className="text-center py-5">
@@ -158,19 +242,25 @@ const ProjectDetailPage = () => {
                     <p className="text-muted mt-3">Loading tasks...</p>
                 </div>
             ) : view === 'board' ? (
-                <TaskBoard tasks={tasks} />
+                <TaskBoard
+                    tasks={tasks}
+                    onStatusChange={handleStatusChange}
+                />
             ) : (
                 <TaskTable tasks={tasks} />
             )}
 
-            <TaskFormModal
+           <TaskFormModal
                 show={showModal}
-                onClose={() => setShowModal(false)}
-                onSave={(data) => {
-                    console.log('Parent received save:', data);
+                onClose={() => {
                     setShowModal(false);
+                    setEditingTask(null);
                 }}
+                users={users}
+                task={editingTask}
+                onSave={handleSaveTask}
             />
+                        
         </Container>
     );
 };
