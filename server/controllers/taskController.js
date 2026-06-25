@@ -79,10 +79,24 @@ async function updateTaskStatus(req, res, next) {
   }
 }
 
+// DELETE /api/tasks/:id -> delete a task (project_manager/admin only)
+async function deleteTask(req, res, next) {
+  try {
+    const deleted = await taskService.deleteTask(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ code: 404, message: 'Task not found' });
+    }
+    res.status(204).end(); // 204 = success, no body
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listTasks,
   createTask,
   getTask,
   updateTask,
   updateTaskStatus,
+  deleteTask,
 };
