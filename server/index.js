@@ -6,23 +6,19 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const http = require('http');
-
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-
-// Routes
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const projectRoutes = require('./routes/projectRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+const errorHandler = require('./middleware/errorHandler');
 const commentRoutes = require('./routes/commentRoutes');
 const labelRoutes = require('./routes/labelRoutes');
 const attachmentRoutes = require('./routes/attachmentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
-
-// Jobs (Step 4.11)
 const { startDeadlineReminderJob } = require('./jobs/deadlineReminders');
-
-// Error Handler Middleware
-const errorHandler = require('./middleware/errorHandler');
-
 const app = express();
 
 // Security headers
@@ -63,19 +59,20 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Global Error Handler (must be registered after all other routes and middlewares)
+// API Routes (mount each ONCE)
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+// in the API Routes section, alongside the existing mounts (before app.use(errorHandler)):
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
 app.use(errorHandler);
 
-// Create HTTP Server
+// Start listening for requests
 const server = http.createServer(app);
-
-// Initialize Socket.IO
 initSocket(server);
-
-// Start cron job for deadline reminders
 startDeadlineReminderJob();
 
-// Server Port
 const PORT = process.env.PORT || 8000;
 
 // Start Server
