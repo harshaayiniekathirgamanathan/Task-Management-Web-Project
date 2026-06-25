@@ -1,4 +1,5 @@
 const supabase = require('../utils/supabase');
+const { createNotification } = require('./notificationService');
 
 // Get all comments for a task
 async function listComments(taskId) {
@@ -37,6 +38,26 @@ async function addComment(taskId, userId, content) {
 
   if (error) {
     throw error;
+  }
+
+    // Step 4.9 — notify the other people assigned to this task
+  const { data: assignees } = await supabase
+    .from('task_assignments')
+    .select('user_id')
+    .eq('task_id', taskId);
+
+  for (const a of assignees || []) {
+    if (a.user_id === userId) continue; // don't notify the comment author
+    try {
+      await createNotification(
+        a.user_id,
+        'comment_added',
+        'A new comment was added to a task you are on',
+        taskId
+      );
+    } catch (e) {
+      console.error('comment_added notification failed:', e.message);
+    }
   }
 
   return data;
