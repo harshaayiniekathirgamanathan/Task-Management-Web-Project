@@ -54,15 +54,42 @@ enabled (for Socket.IO). DB admin user: `tmadmin`.
 
 Going forward, pushes to `main` redeploy automatically via the workflows.
 
+## Deployment gotchas (resolved — keep for reproducibility)
+
+Two things had to be fixed before the pipelines went green on `main`:
+
+1. **Node 22 in CI.** `@supabase/supabase-js` requires native WebSocket and
+   throws "Node.js 20 detected without native WebSocket support" at
+   `createClient()`. The integration test imports the real client at module
+   load, so the server test job must run on **Node 22** (which also matches the
+   App Service runtime). Workflows pin `node-version: 22`.
+2. **SCM basic auth.** The publish-profile deploy failed with "Publish profile
+   is invalid" because App Service ships with SCM basic auth **disabled**. It
+   was enabled with:
+   ```
+   az resource update -g task-manager-rg --namespace Microsoft.Web \
+     --resource-type basicPublishingCredentialsPolicies --name scm \
+     --parent sites/task-manager-api-cfe737 --set properties.allow=true
+   ```
+   After enabling, the publish profile was re-fetched and the
+   `AZURE_WEBAPP_PUBLISH_PROFILE` secret updated.
+
+Also: the backend deploy job installs full deps, runs tests, then
+`npm prune --omit=dev` so the test gate works while the deployed package stays
+production-only.
+
 ## Database status & migration note
 
-The Azure Postgres server and `taskmanager` database are provisioned and ready,
-but **empty** — the app still uses Supabase (see AZURE_DEPLOYMENT.md Phase 5 for
-the eventual code cutover).
+The `taskmanager` database has been **migrated from Supabase** (Phase 2 done):
+all 10 public tables copied with data (users, projects, tasks,
+task_assignments, task_labels, labels, comments, attachments, notifications,
+refresh_tokens). The app still *reads/writes* Supabase until the Phase 5 code
+cutover (`supabase-js` → `pg` + Azure Blob Storage) — see AZURE_DEPLOYMENT.md.
 
-When migrating data (Phase 2): connecting to the Azure DB directly from the
-local machine failed because the ISP uses **CGNAT** (the IP Azure sees differs
-from the IP web-based checkers report), so a local firewall-rule allow on the
-detected IP does not match. Run the migration from **Azure Cloud Shell**
-instead (it connects over the Azure backbone and is covered by the
-"allow Azure services" rule), or add a firewall rule for the actual egress IP.
+How the migration was run: the local machine could not reach port 5432 (ISP
+blocks outbound Postgres — both Supabase and Azure timed out identically), and
+Azure Cloud Shell now blocks `sudo` and ships only PG16 (too old to dump from
+Supabase's PG17.6). It was done from a throwaway **Azure Container Instance**
+(`postgres:17` image) in `southeastasia`, which reaches Supabase over the
+internet and the Azure DB via the "Allow Azure services" firewall rule. The
+container was deleted afterward.
