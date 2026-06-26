@@ -64,12 +64,13 @@ async function canModifyTask(taskId, user) {
   return isUserAssigned(taskId, user.id);
 }
 
-// Confirm a list of ids are all real users (else throw 400).
+// Confirm a list of ids are all real users who may be assigned (else throw 400).
+// Admins can never be assigned to a task.
 async function assertUsersExist(uniqueIds) {
   if (uniqueIds.length === 0) return;
   const { data: users, error } = await supabase
     .from('users')
-    .select('id')
+    .select('id, role')
     .in('id', uniqueIds);
 
   if (error) {
@@ -79,6 +80,11 @@ async function assertUsersExist(uniqueIds) {
   }
   if (users.length !== uniqueIds.length) {
     const err = new Error('Unknown user assigned');
+    err.status = 400;
+    throw err;
+  }
+  if (users.some((u) => u.role === 'admin')) {
+    const err = new Error('Admins cannot be assigned to tasks');
     err.status = 400;
     throw err;
   }

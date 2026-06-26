@@ -17,6 +17,17 @@ const listUsers = async (req, res) => {
     }
 };
 
+const listAssignableUsers = async (req, res) => {
+    try {
+        const users = await userService.listAssignableUsers({ excludeUserId: req.user.id });
+        res.json(users);
+    } catch (error) {
+        const status = error.status || 500;
+        const message = error.message || 'Internal server error';
+        res.status(status).json({ code: status, message });
+    }
+};
+
 const createUser = async (req, res) => {
     try {
         const { name, email, role } = req.body;
@@ -56,6 +67,7 @@ const deactivateUser = async (req, res) => {
 
 module.exports = {
     listUsers,
+    listAssignableUsers,
     createUser,
     updateUser,
     deactivateUser

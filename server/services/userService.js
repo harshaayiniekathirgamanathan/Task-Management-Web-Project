@@ -28,6 +28,29 @@ const listUsers = async ({ search, role, active }) => {
     return users;
 };
 
+// Users who can be assigned to tasks: active, non-admin, and never the caller.
+// (Admins can't be assigned; project managers shouldn't see themselves.)
+const listAssignableUsers = async ({ excludeUserId } = {}) => {
+    let query = supabase
+        .from('users')
+        .select('id, name, email, role')
+        .eq('is_active', true)
+        .neq('role', 'admin')
+        .order('name', { ascending: true });
+
+    if (excludeUserId) {
+        query = query.neq('id', excludeUserId);
+    }
+
+    const { data: users, error } = await query;
+
+    if (error) {
+        throw { status: 500, message: 'Failed to retrieve assignable users' };
+    }
+
+    return users;
+};
+
 const createUser = async ({ name, email, role }) => {
     const { data: existingUser } = await supabase
         .from('users')
@@ -129,6 +152,7 @@ const deactivateUser = async (id) => {
 
 module.exports = {
     listUsers,
+    listAssignableUsers,
     createUser,
     updateUser,
     deactivateUser

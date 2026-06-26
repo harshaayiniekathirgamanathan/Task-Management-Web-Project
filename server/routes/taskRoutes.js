@@ -16,7 +16,7 @@ const priorityRule = body('priority')
   .isIn(['low', 'medium', 'high']).withMessage('priority must be low, medium, or high');
 
 const dueDateRule = body('due_date')
-  .optional()
+  .optional({ nullable: true, checkFalsy: true })
   .isISO8601().withMessage('due_date must be a valid date')
   .bail()
   .custom((value) => {
@@ -28,6 +28,14 @@ const dueDateRule = body('due_date')
 
 const assigneeRules = [
   body('assignee_ids').optional().isArray().withMessage('assignee_ids must be an array'),
+  body('assignee_ids.*').isUUID().withMessage('each assignee id must be a valid id'),
+];
+
+// On create, a task must have at least one assignee (a collaborator or
+// project manager — admins are rejected in the service layer).
+const createAssigneeRules = [
+  body('assignee_ids')
+    .isArray({ min: 1 }).withMessage('At least one assignee is required'),
   body('assignee_ids.*').isUUID().withMessage('each assignee id must be a valid id'),
 ];
 
@@ -208,7 +216,7 @@ router.post(
     body('title').trim().notEmpty().withMessage('Title is required'),
     priorityRule,
     dueDateRule,
-    ...assigneeRules,
+    ...createAssigneeRules,
   ],
   validate,
   taskController.createTask

@@ -13,7 +13,7 @@ import {
 
 import { useAuth } from '../context/AuthContext';
 import { changeStatus, createTask, listTasks, updateTask } from '../api/tasks';
-import { listUsers } from '../api/users';
+import { listAssignableUsers } from '../api/users';
 import TaskBoard from '../components/TaskBoard';
 import TaskTable from '../components/TaskTable';
 import TaskFormModal from '../components/TaskFormModal';
@@ -73,17 +73,11 @@ const ProjectDetailPage = () => {
     };
     const loadUsers = async () => {
     try {
-        const data = await listUsers();
-
-        // The backend may return either { data: [...] } or just [...]
-        if (Array.isArray(data)) {
-            setUsers(data);
-        } else {
-            setUsers(data.data || []);
-        }
+        const data = await listAssignableUsers();
+        setUsers(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
-        console.error('Failed to load users:', err);
-        setError('Could not load users. Please check the backend.');
+        console.error('Failed to load assignable users:', err);
+        setError('Could not load assignable users. Please check the backend.');
     }
 };
 
@@ -110,12 +104,10 @@ const ProjectDetailPage = () => {
             title: formData.title,
             description: formData.description,
             priority: formData.priority,
-            assignee_ids: formData.assignees
+            assignee_ids: formData.assignees,
+            // null clears the deadline; the modal sends an end-of-day ISO string
+            due_date: formData.due_date || null
         };
-
-        if (formData.due_date) {
-            payload.due_date = formData.due_date;
-        }
 
         if (editingTask) {
             await updateTask(editingTask.id, payload);

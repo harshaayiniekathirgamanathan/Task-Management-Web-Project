@@ -6,8 +6,34 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
 
-// Protect all userRoutes with auth and admin constraints
+// Every user route requires login
 router.use(authMiddleware);
+
+/**
+ * @swagger
+ * /api/users/assignable:
+ *   get:
+ *     summary: List users who can be assigned to tasks (project_manager/admin only)
+ *     description: >
+ *       Returns active, non-admin users excluding the caller. Used to populate the
+ *       assignee picker when creating or editing a task.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of assignable users
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get(
+    '/assignable',
+    requireRole('project_manager', 'admin'),
+    userController.listAssignableUsers
+);
+
+// The remaining user-management routes are admin-only
 router.use(requireRole('admin'));
 
 /**
