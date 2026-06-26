@@ -6,8 +6,34 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
 
-// Protect all userRoutes with auth and admin constraints
+// Every user route requires login
 router.use(authMiddleware);
+
+/**
+ * @swagger
+ * /api/users/assignable:
+ *   get:
+ *     summary: List users who can be assigned to tasks (project_manager/admin only)
+ *     description: >
+ *       Returns active, non-admin users excluding the caller. Used to populate the
+ *       assignee picker when creating or editing a task.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of assignable users
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get(
+    '/assignable',
+    requireRole('project_manager', 'admin'),
+    userController.listAssignableUsers
+);
+
+// The remaining user-management routes are admin-only
 router.use(requireRole('admin'));
 
 /**
@@ -84,7 +110,16 @@ router.post(
     '/',
     [
         body('name').notEmpty().withMessage('Name is required'),
-        body('email').isEmail().withMessage('Valid email is required'),
+        body('email')
+            .isEmail().withMessage('Valid email is required')
+            .bail()
+            .custom((value) => {
+                // Only real Gmail addresses may be onboarded.
+                if (!/^[^@\s]+@gmail\.com$/i.test(value)) {
+                    throw new Error('Email must be a valid @gmail.com address');
+                }
+                return true;
+            }),
         body('role').isIn(['admin', 'project_manager', 'collaborator']).withMessage('Role must be admin, project_manager, or collaborator')
     ],
     validate,

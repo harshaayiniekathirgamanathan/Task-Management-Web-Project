@@ -1,8 +1,18 @@
 const attachmentService = require('../services/attachmentService');
+const taskService = require('../services/taskService');
 
 // Upload a file attachment
 async function uploadAttachment(req, res, next) {
   try {
+    // Collaborators may only upload files to tasks assigned to them.
+    const allowed = await taskService.canModifyTask(req.params.taskId, req.user);
+    if (!allowed) {
+      return res.status(403).json({
+        code: 403,
+        message: 'You can only upload files to tasks assigned to you',
+      });
+    }
+
     const attachment = await attachmentService.uploadAttachment(
       req.params.taskId,
       req.user.id,

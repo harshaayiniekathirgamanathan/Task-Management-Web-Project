@@ -21,10 +21,16 @@ const sendOnboardingEmail = async (to, name, tempPassword) => {
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT, 10),
+        // STARTTLS on 587, implicit TLS on 465
+        secure: parseInt(process.env.SMTP_PORT, 10) === 465,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
+        // Fail fast instead of hanging on an unreachable/blocked SMTP host.
+        connectionTimeout: 10000, // 10s to establish the TCP connection
+        greetingTimeout: 10000,   // 10s to receive the SMTP greeting
+        socketTimeout: 15000,     // 15s of socket inactivity
     });
 
     const mailOptions = {

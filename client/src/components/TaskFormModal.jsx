@@ -1,81 +1,118 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { useState, useEffect, useMemo } from 'react';
+import { Modal, Button, Form, Badge, Alert } from 'react-bootstrap';
+import DeadlineCalendar from './DeadlineCalendar';
 
+const ROLE_LABEL = {
+    project_manager: 'Project Manager',
+    collaborator: 'Collaborator',
+};
 
 const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
-    // State to hold everything the user types
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         priority: 'medium',
         due_date: '',
-        assignees: [] // This will store an array of user IDs
+        assignees: [],
     });
+    const [validationError, setValidationError] = useState('');
 
-    // Whenever the modal opens (show changes) or the task changes (edit mode), reset the form
     useEffect(() => {
         if (task) {
-            // Edit mode: fill it with the existing task's data
             setFormData({
                 title: task.title || '',
                 description: task.description || '',
                 priority: task.priority || 'medium',
-                due_date: task.due_date ? task.due_date.split('T')[0] : '', // format nicely for the date picker
-                assignees: task.assignees ? task.assignees.map(a => a.id.toString()) : []
+                due_date: task.due_date ? task.due_date.split('T')[0] : '',
+                assignees: task.assignees ? task.assignees.map((a) => a.id.toString()) : [],
             });
         } else {
-            // New task mode: start totally fresh
             setFormData({
                 title: '',
                 description: '',
                 priority: 'medium',
                 due_date: '',
-                assignees: []
+                assignees: [],
             });
         }
+        setValidationError('');
     }, [task, show]);
 
-    // Handle standard text/date inputs
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    // Handle the multi-select dropdown which is slightly different
-    const handleAssigneesChange = (e) => {
-        const selectedOptions = Array.from(e.target.selectedOptions).map(opt => opt.value);
-        setFormData(prev => ({ ...prev, assignees: selectedOptions }));
+    const toggleAssignee = (userId) => {
+        const id = userId.toString();
+        setFormData((prev) => {
+            const has = prev.assignees.includes(id);
+            return {
+                ...prev,
+                assignees: has
+                    ? prev.assignees.filter((a) => a !== id)
+                    : [...prev.assignees, id],
+            };
+        });
+        setValidationError('');
     };
 
-    // What to do when they click "Save"
+    const selectedCount = formData.assignees.length;
+
+    // Build the payload the API expects, sending the deadline as end-of-day so
+    // a deadline picked for *today* isn't rejected as "in the past".
+    const buildDueDate = useMemo(
+        () => (dateStr) => (dateStr ? `${dateStr}T23:59:59` : null),
+        []
+    );
+
     const handleSubmit = (e) => {
-        e.preventDefault(); // Stop the page from reloading
-        console.log("Form submitted with data:", formData);
-        onSave(formData);
+        e.preventDefault();
+
+        if (!formData.title.trim()) {
+            setValidationError('Please enter a task title.');
+            return;
+        }
+        // Issue #5 — a task must have at least one assignee. The list only
+        // contains collaborators and project managers, so this also satisfies
+        // "at least one collaborator or project manager".
+        if (selectedCount === 0) {
+            setValidationError('Assign at least one collaborator or project manager.');
+            return;
+        }
+
+        onSave({
+            title: formData.title,
+            description: formData.description,
+            priority: formData.priority,
+            due_date: buildDueDate(formData.due_date),
+            assignees: formData.assignees,
+        });
     };
 
     return (
-        <Modal show={show} onHide={onClose} backdrop="static">
+        <Modal show={show} onHide={onClose} backdrop="static" size="lg">
             <Form onSubmit={handleSubmit}>
                 <Modal.Header closeButton>
                     <Modal.Title>{task ? 'Edit Task' : 'New Task'}</Modal.Title>
                 </Modal.Header>
 
                 <Modal.Body>
-                    {/* Title */}
+                    {validationError && (
+                        <Alert variant="danger" className="py-2">{validationError}</Alert>
+                    )}
+
                     <Form.Group className="mb-3">
                         <Form.Label>Title</Form.Label>
                         <Form.Control
                             type="text"
                             name="title"
-                            required
                             placeholder="e.g. Update user dashboard"
                             value={formData.title}
                             onChange={handleChange}
                         />
                     </Form.Group>
 
-                    {/* Description */}
                     <Form.Group className="mb-3">
                         <Form.Label>Description</Form.Label>
                         <Form.Control
@@ -87,7 +124,6 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
                         />
                     </Form.Group>
 
-                    {/* Priority */}
                     <Form.Group className="mb-3">
                         <Form.Label>Priority</Form.Label>
                         <Form.Select name="priority" value={formData.priority} onChange={handleChange}>
@@ -97,32 +133,55 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
                         </Form.Select>
                     </Form.Group>
 
-                    {/* Due Date */}
+                    {/* Deadline — integrated calendar */}
                     <Form.Group className="mb-3">
-                        <Form.Label>Due Date</Form.Label>
-                        <Form.Control
-                            type="date"
-                            name="due_date"
+                        <Form.Label>Deadline</Form.Label>
+                        <DeadlineCalendar
                             value={formData.due_date}
-                            onChange={handleChange}
+                            onChange={(date) =>
+                                setFormData((prev) => ({ ...prev, due_date: date }))
+                            }
                         />
                     </Form.Group>
 
-                    {/* Assignees */}
-                    <Form.Group className="mb-3">
-                        <Form.Label>Assignees <small className="text-muted">(Hold Ctrl/Cmd to pick multiple)</small></Form.Label>
-                        <Form.Select
-                            multiple
-                            name="assignees"
-                            value={formData.assignees}
-                            onChange={handleAssigneesChange}
-                        >
-                            {users.map(user => (
-                                <option key={user.id} value={user.id}>
-                                    {user.name}
-                                </option>
-                            ))}
-                        </Form.Select>
+                    {/* Assignees — required; admins and the current user are not shown */}
+                    <Form.Group className="mb-1">
+                        <Form.Label className="d-flex align-items-center justify-content-between">
+                            <span>
+                                Assignees <span className="text-danger">*</span>
+                            </span>
+                            <Badge bg="secondary">{selectedCount} selected</Badge>
+                        </Form.Label>
+
+                        {users.length === 0 ? (
+                            <p className="text-muted small mb-0">
+                                No assignable team members available.
+                            </p>
+                        ) : (
+                            <div className="tm-assignee-list">
+                                {users.map((user) => {
+                                    const id = user.id.toString();
+                                    const checked = formData.assignees.includes(id);
+                                    return (
+                                        <label
+                                            key={user.id}
+                                            className={`tm-assignee-row ${checked ? 'is-selected' : ''}`}
+                                        >
+                                            <Form.Check
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => toggleAssignee(user.id)}
+                                                id={`assignee-${user.id}`}
+                                            />
+                                            <span className="tm-assignee-name">{user.name}</span>
+                                            <Badge bg="secondary" className="ms-auto">
+                                                {ROLE_LABEL[user.role] || user.role}
+                                            </Badge>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </Form.Group>
                 </Modal.Body>
 

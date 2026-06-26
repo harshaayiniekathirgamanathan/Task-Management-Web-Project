@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
         const newToken = res.data.accessToken;
         setToken(newToken);
         setAuthToken(newToken);     // now axios has the token again
-      } catch (err) {
+      } catch {
         logout();                   // cookie expired/missing → log out cleanly
       } finally {
         setLoading(false);

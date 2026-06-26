@@ -11,13 +11,16 @@ function toTaskShape(row) {
     priority: row.priority,
     status: row.status,
     due_date: row.due_date,
+    project_id: row.project_id,
+    project: row.project || null,
     assignees: (row.task_assignments || []).map((a) => a.users),
     labels: (row.task_labels || []).map((l) => l.labels),
   };
 }
 
 const TASK_SELECT =
-  'id, title, description, priority, status, due_date, ' +
+  'id, title, description, priority, status, due_date, project_id, ' +
+  'project:projects ( id, title ), ' +
   'task_assignments ( users ( id, name ) ), ' +
   'task_labels ( labels ( id, name, color ) )';
 
@@ -56,12 +59,21 @@ async function isUserAssigned(taskId, userId) {
   return !!data;
 }
 
-// Confirm a list of ids are all real users (else throw 400).
+// Can this user add comments / upload files to this task?
+// Managers and admins always may; a collaborator only on tasks assigned to them.
+async function canModifyTask(taskId, user) {
+  if (!user) return false;
+  if (user.role === 'project_manager' || user.role === 'admin') return true;
+  return isUserAssigned(taskId, user.id);
+}
+
+// Confirm a list of ids are all real users who may be assigned (else throw 400).
+// Admins can never be assigned to a task.
 async function assertUsersExist(uniqueIds) {
   if (uniqueIds.length === 0) return;
   const { data: users, error } = await supabase
     .from('users')
-    .select('id')
+    .select('id, role')
     .in('id', uniqueIds);
 
   if (error) {
@@ -71,6 +83,11 @@ async function assertUsersExist(uniqueIds) {
   }
   if (users.length !== uniqueIds.length) {
     const err = new Error('Unknown user assigned');
+    err.status = 400;
+    throw err;
+  }
+  if (users.some((u) => u.role === 'admin')) {
+    const err = new Error('Admins cannot be assigned to tasks');
     err.status = 400;
     throw err;
   }
@@ -341,4 +358,5 @@ module.exports = {
   updateTask,
   updateTaskStatus,
   deleteTask,
+  canModifyTask,
 };
