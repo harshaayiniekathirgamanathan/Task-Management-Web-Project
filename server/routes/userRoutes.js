@@ -6,6 +6,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
 
+const GMAIL_ADDRESS_REGEX = /^[^@\s]+@gmail\.com$/i;
+
 // Every user route requires login
 router.use(authMiddleware);
 
@@ -111,15 +113,16 @@ router.post(
     [
         body('name').notEmpty().withMessage('Name is required'),
         body('email')
+            .trim()
             .isEmail().withMessage('Valid email is required')
             .bail()
             .custom((value) => {
-                // Only real Gmail addresses may be onboarded.
-                if (!/^[^@\s]+@gmail\.com$/i.test(value)) {
+                if (!GMAIL_ADDRESS_REGEX.test(value)) {
                     throw new Error('Email must be a valid @gmail.com address');
                 }
                 return true;
-            }),
+            })
+            .customSanitizer((value) => value.toLowerCase()),
         body('role').isIn(['admin', 'project_manager', 'collaborator']).withMessage('Role must be admin, project_manager, or collaborator')
     ],
     validate,

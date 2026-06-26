@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Button } from 'react-bootstrap';
+import { Alert, Modal, Form, Button } from 'react-bootstrap';
+
+const GMAIL_ADDRESS_REGEX = /^[^@\s]+@gmail\.com$/i;
 
 // Props:
 //   show     — boolean
@@ -13,6 +15,7 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('collaborator');
+    const [validationError, setValidationError] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -24,10 +27,24 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
             setEmail('');
             setRole('collaborator');
         }
+        setValidationError('');
     }, [user, show]);
 
     function handleSave() {
-        onSave({ name, email, role }); // parent does the API call and closes on success
+        const trimmedName = name.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!trimmedName) {
+            setValidationError('Name is required.');
+            return;
+        }
+
+        if (!isEditMode && !GMAIL_ADDRESS_REGEX.test(normalizedEmail)) {
+            setValidationError('Use a valid @gmail.com address so the onboarding email can be delivered.');
+            return;
+        }
+
+        onSave({ name: trimmedName, email: normalizedEmail, role });
     }
 
     return (
@@ -37,6 +54,12 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
             </Modal.Header>
 
             <Modal.Body>
+                {validationError && (
+                    <Alert variant="danger" className="py-2">
+                        {validationError}
+                    </Alert>
+                )}
+
                 <Form onSubmit={(e) => e.preventDefault()}>
                     <Form.Group className="mb-3" controlId="modalUserName">
                         <Form.Label className="fw-semibold">Name</Form.Label>
@@ -52,11 +75,25 @@ export default function UserFormModal({ show, onClose, onSave, user, loading = f
                         <Form.Label className="fw-semibold">Email address</Form.Label>
                         <Form.Control
                             type="email"
-                            placeholder="name@example.com"
+                            placeholder="name@gmail.com"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                setValidationError('');
+                            }}
                             disabled={isEditMode}
+                            isInvalid={!isEditMode && Boolean(email) && !GMAIL_ADDRESS_REGEX.test(email.trim())}
                         />
+                        {!isEditMode && (
+                            <>
+                                <Form.Control.Feedback type="invalid">
+                                    Email must be a valid @gmail.com address.
+                                </Form.Control.Feedback>
+                                <Form.Text className="text-muted">
+                                    Onboarding emails are sent through the Gmail SMTP setup.
+                                </Form.Text>
+                            </>
+                        )}
                     </Form.Group>
 
                     <Form.Group className="mb-3" controlId="modalUserRole">
