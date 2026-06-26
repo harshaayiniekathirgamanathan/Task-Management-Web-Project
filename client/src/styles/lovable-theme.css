@@ -494,3 +494,107 @@ hr { border-color: var(--lv-border); opacity: 1; }
   /* Animate fill growth when progress updates */
   transition: width 320ms var(--lv-ease-out);
 }
+
+/* ---------------------------------------------------------------------
+   Dashboard + Tasks tab
+   --------------------------------------------------------------------- */
+
+/* Minimal black pill action button */
+.tm-pill-btn {
+  border: none;
+  background-color: var(--lv-charcoal);
+  color: var(--lv-off-white);
+  border-radius: var(--lv-radius-pill);
+  padding: 9px 20px;
+  font-size: 0.9rem;
+  box-shadow: var(--lv-inset-shadow);
+  transition: transform 140ms var(--lv-ease-out), opacity 140ms var(--lv-ease-out);
+}
+.tm-pill-btn:hover { opacity: 0.92; }
+.tm-pill-btn:active { transform: scale(0.97); }
+
+/* Empty / informational state */
+.tm-empty {
+  border: 1px dashed var(--lv-border-strong);
+  border-radius: var(--lv-radius-card);
+  color: var(--lv-muted);
+  padding: 28px 20px;
+  text-align: center;
+}
+
+/* Grouped task lists (Tasks tab + dashboard) */
+.tm-task-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tm-task-group-title { font-weight: 600; letter-spacing: -0.4px; color: var(--lv-charcoal); }
+
+.tm-task-rows {
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  overflow: hidden;
+}
+.tm-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--lv-border);
+  padding: 12px 14px;
+  color: var(--lv-charcoal);
+  transition: background-color 120ms var(--lv-ease-out);
+}
+.tm-task-row:last-child { border-bottom: none; }
+.tm-task-row:hover { background-color: var(--lv-charcoal-04); }
+.tm-task-row:active { background-color: var(--lv-charcoal-04); }
+.tm-task-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tm-task-row-title { font-weight: 500; }
+.tm-task-row-meta { font-size: 0.8rem; color: var(--lv-muted); }
+.tm-task-row--more { justify-content: center; color: var(--lv-muted); font-size: 0.85rem; }
+
+.tm-status-pill {
+  border: 1px solid var(--lv-border);
+  font-weight: 400;
+}
+
+/* Deadline tracker */
+.tm-deadline-group { margin-bottom: 14px; }
+.tm-deadline-group:last-child { margin-bottom: 0; }
+.tm-deadline-label {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+.tm-deadline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--lv-radius-pill);
+  background-color: var(--lv-charcoal-40);
+  margin-right: 8px;
+}
+.tm-deadline-dot.is-overdue { background-color: #be123c; }
+.tm-deadline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0 6px 16px;
+  border-top: 1px solid var(--lv-border);
+}
+
+/* Notifications form */
+.tm-notif-list { display: flex; flex-direction: column; }
+.tm-notif-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--lv-border);
+}
+.tm-notif-item:last-child { border-bottom: none; }
+.tm-notif-item.is-unread .tm-notif-message { font-weight: 600; color: var(--lv-charcoal); }
+.tm-notif-message { color: var(--lv-charcoal-82); }

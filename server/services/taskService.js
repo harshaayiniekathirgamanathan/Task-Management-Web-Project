@@ -11,13 +11,16 @@ function toTaskShape(row) {
     priority: row.priority,
     status: row.status,
     due_date: row.due_date,
+    project_id: row.project_id,
+    project: row.project || null,
     assignees: (row.task_assignments || []).map((a) => a.users),
     labels: (row.task_labels || []).map((l) => l.labels),
   };
 }
 
 const TASK_SELECT =
-  'id, title, description, priority, status, due_date, ' +
+  'id, title, description, priority, status, due_date, project_id, ' +
+  'project:projects ( id, title ), ' +
   'task_assignments ( users ( id, name ) ), ' +
   'task_labels ( labels ( id, name, color ) )';
 

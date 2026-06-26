@@ -7,6 +7,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import UsersPage from './pages/UsersPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
+import TasksPage from './pages/TasksPage';
 
 export default function AppRoutes() {
   return (
@@ -19,6 +20,8 @@ export default function AppRoutes() {
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
 
         <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+
+        <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
 
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
 
