@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { changeStatus, createTask, listTasks, updateTask } from '../api/tasks';
 import { listAssignableUsers } from '../api/users';
+import { getProject } from '../api/projects';
 import TaskBoard from '../components/TaskBoard';
 import TaskTable from '../components/TaskTable';
 import TaskFormModal from '../components/TaskFormModal';
@@ -29,6 +30,7 @@ const ProjectDetailPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
 
+    const [project, setProject] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -81,12 +83,22 @@ const ProjectDetailPage = () => {
     }
 };
 
+    const loadProject = async () => {
+        try {
+            const data = await getProject(id);
+            setProject(data);
+        } catch (err) {
+            console.error('Failed to load project:', err);
+        }
+    };
+
     useEffect(() => {
         loadTasks();
     }, [id, filters.status, filters.priority]);
     useEffect(() => {
     loadUsers();
-}, []);
+    loadProject();
+}, [id]);
 
     const handleFilterChange = (name, value) => {
         setFilters(previousFilters => ({
@@ -123,6 +135,7 @@ const ProjectDetailPage = () => {
         setShowModal(false);
         setEditingTask(null);
         loadTasks();
+        loadProject();
     } catch (err) {
         console.error('Failed to save task:', err);
         setError(err.response?.data?.message || 'Could not save task.');
@@ -138,6 +151,7 @@ const ProjectDetailPage = () => {
 
         setSuccess('Task status updated successfully.');
         loadTasks();
+        loadProject();
     } catch (err) {
         console.error('Failed to change status:', err);
         setError(err.response?.data?.message || 'Could not change task status.');
@@ -146,7 +160,31 @@ const ProjectDetailPage = () => {
 
     return (
         <Container className="mt-4">
-            <h2>Project Alpha (ID: {id})</h2>
+            <div className="mb-4">
+                <h2 className="mb-1">{project?.title || 'Project'}</h2>
+                {project && (
+                    <div className="text-muted small d-flex flex-wrap align-items-center gap-2">
+                        <span>
+                            Created by {project.creator_name || 'Unknown'}
+                            {' · '}
+                            {new Date(project.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="d-inline-flex align-items-center gap-2">
+                            <span className="tm-progress-track" style={{ width: '120px' }}>
+                                <span
+                                    className="tm-progress-fill"
+                                    style={{ width: `${project.progress ?? 0}%` }}
+                                />
+                            </span>
+                            <span className="fw-semibold">{project.progress ?? 0}%</span>
+                            <span>({project.completed_tasks}/{project.total_tasks} done)</span>
+                        </span>
+                    </div>
+                )}
+                {project?.description && (
+                    <p className="text-muted mt-2 mb-0">{project.description}</p>
+                )}
+            </div>
 
             <div className="mb-4 d-flex justify-content-between align-items-center">
                 <ButtonGroup>

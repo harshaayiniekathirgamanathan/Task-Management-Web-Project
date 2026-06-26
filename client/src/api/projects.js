@@ -6,6 +6,12 @@ export async function listProjects() {
     return response.data; // shape: { data: [...projects] }
 }
 
+// GET /api/projects/:id — fetch a single project (with creator + progress)
+export async function getProject(id) {
+    const response = await axiosClient.get(`/api/projects/${id}`);
+    return response.data;
+}
+
 // POST /api/projects — create a new project
 // data: { title, description }
 export async function createProject(data) {

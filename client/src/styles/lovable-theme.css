@@ -474,3 +474,23 @@ hr { border-color: var(--lv-border); opacity: 1; }
 .tm-assignee-row.is-selected { background-color: var(--lv-charcoal-04); }
 .tm-assignee-row .form-check { margin: 0; min-height: auto; }
 .tm-assignee-name { color: var(--lv-charcoal); }
+
+/* ---------------------------------------------------------------------
+   Progress bar — task completion (projects)
+   --------------------------------------------------------------------- */
+.tm-progress-track {
+  display: block;
+  width: 100%;
+  height: 8px;
+  background-color: var(--lv-charcoal-04);
+  border-radius: var(--lv-radius-pill);
+  overflow: hidden;
+}
+.tm-progress-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--lv-charcoal);
+  border-radius: var(--lv-radius-pill);
+  /* Animate fill growth when progress updates */
+  transition: width 320ms var(--lv-ease-out);
+}
