@@ -2,17 +2,20 @@ const request = require('supertest');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('../routes/authRoutes');
-const supabase = require('../utils/supabase');
 const bcrypt = require('bcryptjs');
 process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
 
-// Mock the Supabase client
-jest.mock('../utils/supabase', () => {
-    return {
-        from: jest.fn()
-    };
-});
+// Mock the database layer so these tests never touch a real Postgres.
+jest.mock('../utils/db', () => ({
+    one: jest.fn(),
+    many: jest.fn(),
+    query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    tx: jest.fn(),
+    end: jest.fn(),
+}));
+
+const db = require('../utils/db');
 
 const app = express();
 app.use(express.json());
@@ -20,22 +23,10 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 
 describe('Auth Endpoints', () => {
-    let mockSingle = jest.fn();
-    let mockEq = jest.fn(() => ({ single: mockSingle }));
-    let mockSelect = jest.fn(() => ({ eq: mockEq }));
-
     beforeEach(() => {
         jest.clearAllMocks();
-        supabase.from.mockImplementation((table) => {
-            if (table === 'users' || table === 'refresh_tokens') {
-                return {
-                    select: mockSelect,
-                    insert: jest.fn().mockResolvedValue({ error: null }),
-                    delete: jest.fn().mockReturnThis(),
-                    eq: jest.fn().mockReturnThis()
-                };
-            }
-        });
+        // storeRefreshToken (INSERT) and other writes resolve by default.
+        db.query.mockResolvedValue({ rows: [], rowCount: 0 });
     });
 
     it('POST /login should login user with correct credentials', async () => {
@@ -49,7 +40,8 @@ describe('Auth Endpoints', () => {
             must_reset_password: false
         };
 
-        mockSingle.mockResolvedValueOnce({ data: mockUser, error: null });
+        // loginUser: SELECT * FROM users WHERE email = $1
+        db.one.mockResolvedValueOnce(mockUser);
 
         const res = await request(app)
             .post('/api/auth/login')
@@ -72,7 +64,7 @@ describe('Auth Endpoints', () => {
             must_reset_password: false
         };
 
-        mockSingle.mockResolvedValueOnce({ data: mockUser, error: null });
+        db.one.mockResolvedValueOnce(mockUser);
 
         const res = await request(app)
             .post('/api/auth/login')

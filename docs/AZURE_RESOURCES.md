@@ -30,6 +30,7 @@ companion to [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md) (the generic how-to).
 | Static Web App (frontend) | `task-manager-web-cfe737` | https://orange-mushroom-072c7d500.7.azurestaticapps.net |
 | PostgreSQL Flexible Server | `task-manager-db-cfe737` | `task-manager-db-cfe737.postgres.database.azure.com:5432` |
 | Database | `taskmanager` | Postgres 16, Burstable B1ms |
+| Storage account (attachments) | `taskmgrattachcfe737` | `attachments` container, public blob read |
 
 Backend runtime: **Node 22 LTS**, startup `node index.js`, Always On + WebSockets
 enabled (for Socket.IO). DB admin user: `tmadmin`.
@@ -80,11 +81,24 @@ production-only.
 
 ## Database status & migration note
 
-The `taskmanager` database has been **migrated from Supabase** (Phase 2 done):
-all 10 public tables copied with data (users, projects, tasks,
-task_assignments, task_labels, labels, comments, attachments, notifications,
-refresh_tokens). The app still *reads/writes* Supabase until the Phase 5 code
-cutover (`supabase-js` → `pg` + Azure Blob Storage) — see AZURE_DEPLOYMENT.md.
+The `taskmanager` database was **migrated from Supabase** (Phase 2) and the
+application code has now been **cut over off Supabase (Phase 5 done)**:
+
+- Data access uses `pg` (node-postgres) via `server/utils/db.js` — the
+  `@supabase/supabase-js` dependency and `utils/supabase.js` are removed.
+- Attachments upload to **Azure Blob Storage** (`@azure/storage-blob`,
+  `taskmgrattachcfe737`/`attachments`) instead of Supabase Storage.
+- App Service settings: `DATABASE_URL`, `AZURE_STORAGE_CONNECTION_STRING`,
+  `AZURE_STORAGE_ATTACHMENTS_CONTAINER` added; `SUPABASE_URL` /
+  `SUPABASE_SERVICE_ROLE_KEY` removed.
+
+CI now runs the integration test suite against an ephemeral `postgres:16`
+service container (schema loaded from `db/schema.sql` + the refresh-tokens
+migration), so the SQL data layer is exercised on every push.
+
+Local development: your network blocks outbound 5432 to Azure, so `server/.env`
+points `DATABASE_URL` at a local Postgres (`brew services start postgresql@16`,
+`createdb taskmanager`, load `db/schema.sql` + the migration).
 
 How the migration was run: the local machine could not reach port 5432 (ISP
 blocks outbound Postgres — both Supabase and Azure timed out identically), and
