@@ -17,7 +17,7 @@ concurrency:
 env:
   # Name of the provisioned Azure Web App (see docs/AZURE_DEPLOYMENT.md).
   AZURE_WEBAPP_NAME: task-manager-api-cfe737
-  NODE_VERSION: 20
+  NODE_VERSION: 22
 
 jobs:
   build-and-deploy:
