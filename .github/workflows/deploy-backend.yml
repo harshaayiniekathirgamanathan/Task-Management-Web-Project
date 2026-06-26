@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Set this to the name of your Azure Web App (see docs/AZURE_DEPLOYMENT.md).
-  AZURE_WEBAPP_NAME: task-manager-api
+  # Name of the provisioned Azure Web App (see docs/AZURE_DEPLOYMENT.md).
+  AZURE_WEBAPP_NAME: task-manager-api-cfe737
   NODE_VERSION: 20
 
 jobs:
