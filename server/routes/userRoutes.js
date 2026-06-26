@@ -110,7 +110,16 @@ router.post(
     '/',
     [
         body('name').notEmpty().withMessage('Name is required'),
-        body('email').isEmail().withMessage('Valid email is required'),
+        body('email')
+            .isEmail().withMessage('Valid email is required')
+            .bail()
+            .custom((value) => {
+                // Only real Gmail addresses may be onboarded.
+                if (!/^[^@\s]+@gmail\.com$/i.test(value)) {
+                    throw new Error('Email must be a valid @gmail.com address');
+                }
+                return true;
+            }),
         body('role').isIn(['admin', 'project_manager', 'collaborator']).withMessage('Role must be admin, project_manager, or collaborator')
     ],
     validate,
