@@ -45,9 +45,11 @@ export default function Layout() {
       </Navbar>
 
       {/* Each page shows here, below the navbar */}
-      <Container className="mt-4">
-        <Outlet />
-      </Container>
+      <main>
+        <Container className="mt-4 tm-page-enter">
+          <Outlet />
+        </Container>
+      </main>
     </>
   );
 }

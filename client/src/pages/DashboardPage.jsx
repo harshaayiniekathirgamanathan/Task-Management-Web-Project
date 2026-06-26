@@ -157,9 +157,7 @@ export default function DashboardPage() {
 
                             {isAdmin ? (
                                 <p className="text-muted mb-0">
-                                    As an admin you aren’t assigned tasks. Use{' '}
-                                    <strong>Projects</strong> to oversee work and{' '}
-                                    <strong>Users</strong> to manage the team.
+                                    Admins aren’t assigned tasks.
                                 </p>
                             ) : myTasks.length === 0 ? (
                                 <p className="text-muted mb-0">

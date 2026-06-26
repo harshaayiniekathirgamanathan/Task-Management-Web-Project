@@ -101,9 +101,11 @@ small,
   font-weight: 400;
   border-radius: var(--lv-radius-sm);
   padding: 8px 16px;
-  transition: opacity 0.12s ease, box-shadow 0.12s ease;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease,
+    transform 0.12s var(--lv-ease-out);
 }
-.btn:active { opacity: 0.8; }
+/* Tactile press feedback — the button visibly responds to the click. */
+.btn:active { opacity: 0.9; transform: scale(0.97); }
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--lv-focus-shadow);
@@ -598,3 +600,62 @@ hr { border-color: var(--lv-border); opacity: 1; }
 .tm-notif-item:last-child { border-bottom: none; }
 .tm-notif-item.is-unread .tm-notif-message { font-weight: 600; color: var(--lv-charcoal); }
 .tm-notif-message { color: var(--lv-charcoal-82); }
+
+/* ---------------------------------------------------------------------
+   Auth screen (login / change password)
+   --------------------------------------------------------------------- */
+.tm-auth {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.tm-auth-card {
+  width: 100%;
+  max-width: 400px;
+}
+.tm-auth-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--lv-radius-md);
+  background-color: var(--lv-charcoal);
+  color: var(--lv-off-white);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.15rem;
+  box-shadow: var(--lv-inset-shadow);
+  margin-bottom: 20px;
+}
+.tm-auth-title {
+  font-size: 1.6rem;
+  letter-spacing: -0.9px;
+  margin-bottom: 4px;
+}
+.tm-auth-sub { color: var(--lv-muted); margin-bottom: 24px; }
+.tm-auth .form-control { padding-top: 10px; padding-bottom: 10px; }
+.tm-auth-card .card-body { padding: 32px; }
+
+/* ---------------------------------------------------------------------
+   Global rhythm refinements
+   --------------------------------------------------------------------- */
+/* Page heading scale: confident but not shouting (impeccable: control by
+   weight + spacing, not raw size). */
+h2 { font-size: 1.6rem; }
+@media (min-width: 768px) { h2 { font-size: 1.85rem; } }
+
+/* Cards get a hair more interior room for breathing space. */
+.card-body { padding: 1.25rem; }
+
+/* Quiet entrance for primary content so navigation doesn't feel abrupt.
+   Opacity-only — safe under headless renders and reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  main > .container,
+  .tm-page-enter {
+    animation: tm-fade-in 240ms var(--lv-ease-out) both;
+  }
+}
+@keyframes tm-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

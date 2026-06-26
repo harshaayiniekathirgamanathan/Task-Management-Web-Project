@@ -63,8 +63,7 @@ export default function TasksPage() {
 
     return (
         <Container className="py-4">
-            <h2 className="mb-1">My Tasks</h2>
-            <p className="text-muted">Tasks assigned to you, grouped by project.</p>
+            <h2 className="mb-4">My Tasks</h2>
 
             {error && <Alert variant="danger">{error}</Alert>}
 
@@ -72,16 +71,12 @@ export default function TasksPage() {
                 <div className="text-center py-5">
                     <Spinner animation="border" />
                 </div>
-            ) : isManager && user?.role === 'admin' ? (
+            ) : user?.role === 'admin' ? (
                 <div className="tm-empty">
-                    Admins aren’t assigned tasks. Head to <strong>Projects</strong> to manage
-                    work, or <strong>Users</strong> to manage the team.
+                    Admins aren’t assigned tasks. Manage work in Projects and the team in Users.
                 </div>
             ) : tasks.length === 0 ? (
-                <div className="tm-empty">
-                    You have no assigned tasks right now. When a manager assigns you to a task,
-                    it’ll show up here.
-                </div>
+                <div className="tm-empty">No tasks assigned to you yet.</div>
             ) : (
                 groups.map((group) => (
                     <div key={group.projectId} className="tm-task-group mb-4">
