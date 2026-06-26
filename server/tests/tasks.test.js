@@ -131,17 +131,36 @@ describe('Tasks API', () => {
     const res = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${managerToken}`)
-      .send({ project_id: projectId, title: 'Created in test', priority: 'high' });
+      .send({
+        project_id: projectId,
+        title: 'Created in test',
+        priority: 'high',
+        assignee_ids: [collaborator.id],
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('todo');
+  });
+
+  it('creating a task with no assignees is rejected -> 400', async () => {
+    const res = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ project_id: projectId, title: 'No assignees' });
+
+    expect(res.status).toBe(400);
   });
 
   it('a task with a past due_date is rejected -> 400', async () => {
     const res = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${managerToken}`)
-      .send({ project_id: projectId, title: 'Late task', due_date: '2020-01-01' });
+      .send({
+        project_id: projectId,
+        title: 'Late task',
+        due_date: '2020-01-01',
+        assignee_ids: [collaborator.id],
+      });
 
     expect(res.status).toBe(400);
   });

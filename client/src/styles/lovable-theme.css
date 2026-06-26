@@ -42,6 +42,10 @@
   --lv-soft-shadow: rgba(0, 0, 0, 0.06) 0px 4px 16px;
   --lv-ring: rgba(59, 130, 246, 0.5);
 
+  /* --- Motion (strong custom curves; built-in CSS easings are too weak) --- */
+  --lv-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --lv-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
   /* --- Type --- */
   --lv-font: 'Camera Plain Variable', ui-sans-serif, system-ui, -apple-system,
     'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -97,9 +101,11 @@ small,
   font-weight: 400;
   border-radius: var(--lv-radius-sm);
   padding: 8px 16px;
-  transition: opacity 0.12s ease, box-shadow 0.12s ease;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease,
+    transform 0.12s var(--lv-ease-out);
 }
-.btn:active { opacity: 0.8; }
+/* Tactile press feedback — the button visibly responds to the click. */
+.btn:active { opacity: 0.9; transform: scale(0.97); }
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--lv-focus-shadow);
@@ -245,3 +251,411 @@ hr { border-color: var(--lv-border); opacity: 1; }
 }
 .modal-header,
 .modal-footer { border-color: var(--lv-border); }
+
+/* ---------------------------------------------------------------------
+   Kanban board — drag & drop between status columns
+   --------------------------------------------------------------------- */
+.tm-column {
+  background-color: var(--lv-charcoal-03);
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-container);
+  padding: 12px;
+  height: 100%;
+  /* Animate only the boundary cue; transform/opacity stay free for cards */
+  transition: background-color 160ms var(--lv-ease-out),
+    box-shadow 160ms var(--lv-ease-out);
+}
+/* Active drop target — a clear, calm "you can drop here" cue */
+.tm-column.is-over {
+  background-color: var(--lv-charcoal-04);
+  box-shadow: inset 0 0 0 1.5px var(--lv-border-strong);
+}
+
+.tm-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 4px 12px;
+}
+.tm-column-title {
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--lv-charcoal);
+}
+.tm-column-count {
+  min-width: 22px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--lv-muted);
+  background-color: var(--lv-charcoal-04);
+  border-radius: var(--lv-radius-pill);
+  padding: 1px 8px;
+}
+
+/* The draggable wrapper around a card */
+.tm-draggable { touch-action: none; }
+.tm-draggable:focus-visible { outline: none; }
+.tm-draggable:focus-visible .card {
+  box-shadow: 0 0 0 2px var(--lv-ring);
+}
+
+/* Card press + lift feedback (only on real pointers, never on touch taps) */
+@media (hover: hover) and (pointer: fine) {
+  .tm-draggable[data-can-drag='true'] .card {
+    cursor: grab;
+    transition: transform 160ms var(--lv-ease-out),
+      box-shadow 160ms var(--lv-ease-out);
+  }
+  .tm-draggable[data-can-drag='true']:hover .card {
+    box-shadow: var(--lv-soft-shadow);
+  }
+  .tm-draggable[data-can-drag='true'] .card:active { transform: scale(0.985); }
+}
+
+/* The floating clone that follows the cursor while dragging */
+.tm-card-overlay {
+  cursor: grabbing;
+  transform: rotate(2deg);
+}
+.tm-card-overlay .card {
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 12px 28px;
+  border-color: var(--lv-border-strong);
+}
+
+/* Empty-column hint */
+.tm-column-empty {
+  border: 1px dashed var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  color: var(--lv-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 18px 8px;
+}
+
+/* ---------------------------------------------------------------------
+   Label "+" trigger + quick-add popover
+   --------------------------------------------------------------------- */
+.tm-label-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: var(--lv-radius-pill);
+  border: 1px dashed var(--lv-border-strong);
+  background: transparent;
+  color: var(--lv-muted);
+  line-height: 1;
+  font-size: 0.95rem;
+  transition: transform 140ms var(--lv-ease-out),
+    color 140ms var(--lv-ease-out), border-color 140ms var(--lv-ease-out);
+}
+.tm-label-add:hover { color: var(--lv-charcoal); border-color: var(--lv-charcoal); }
+.tm-label-add:active { transform: scale(0.92); }
+
+.tm-label-pop.popover {
+  background-color: var(--lv-cream);
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  box-shadow: var(--lv-focus-shadow);
+}
+.tm-label-pop .popover-arrow::after { border-top-color: var(--lv-cream); }
+.tm-label-pop .popover-body { padding: 10px; }
+
+/* ---------------------------------------------------------------------
+   Task form — deadline calendar
+   --------------------------------------------------------------------- */
+.tm-cal {
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  padding: 12px;
+  background-color: var(--lv-cream);
+  max-width: 320px;
+}
+.tm-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tm-cal-title { font-weight: 600; letter-spacing: -0.4px; color: var(--lv-charcoal); }
+.tm-cal-nav {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-pill);
+  background: transparent;
+  color: var(--lv-charcoal);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: background-color 140ms var(--lv-ease-out), transform 140ms var(--lv-ease-out);
+}
+.tm-cal-nav:hover { background-color: var(--lv-charcoal-04); }
+.tm-cal-nav:active { transform: scale(0.92); }
+
+.tm-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.tm-cal-weekdays { margin-bottom: 2px; }
+.tm-cal-weekday {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--lv-muted);
+  padding: 2px 0;
+}
+.tm-cal-day {
+  aspect-ratio: 1 / 1;
+  border: none;
+  background: transparent;
+  border-radius: var(--lv-radius-sm);
+  color: var(--lv-charcoal);
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms var(--lv-ease-out), color 120ms var(--lv-ease-out),
+    transform 120ms var(--lv-ease-out);
+}
+.tm-cal-day.is-empty { background: transparent; cursor: default; }
+.tm-cal-day:not(:disabled):not(.is-empty):hover { background-color: var(--lv-charcoal-04); }
+.tm-cal-day:not(:disabled):active { transform: scale(0.9); }
+.tm-cal-day:disabled { color: var(--lv-charcoal-40); cursor: not-allowed; }
+.tm-cal-day.is-today { box-shadow: inset 0 0 0 1px var(--lv-border-strong); }
+.tm-cal-day.is-selected {
+  background-color: var(--lv-charcoal);
+  color: var(--lv-off-white);
+  box-shadow: var(--lv-inset-shadow);
+}
+.tm-cal-day.is-selected:hover { background-color: var(--lv-charcoal); }
+
+.tm-cal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--lv-border);
+}
+.tm-cal-clear {
+  border: none;
+  background: transparent;
+  color: var(--lv-charcoal);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Task form — assignee picker
+   --------------------------------------------------------------------- */
+.tm-assignee-list {
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.tm-assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--lv-border);
+  transition: background-color 120ms var(--lv-ease-out);
+}
+.tm-assignee-row:last-child { border-bottom: none; }
+.tm-assignee-row:hover { background-color: var(--lv-charcoal-04); }
+.tm-assignee-row.is-selected { background-color: var(--lv-charcoal-04); }
+.tm-assignee-row .form-check { margin: 0; min-height: auto; }
+.tm-assignee-name { color: var(--lv-charcoal); }
+
+/* ---------------------------------------------------------------------
+   Progress bar — task completion (projects)
+   --------------------------------------------------------------------- */
+.tm-progress-track {
+  display: block;
+  width: 100%;
+  height: 8px;
+  background-color: var(--lv-charcoal-04);
+  border-radius: var(--lv-radius-pill);
+  overflow: hidden;
+}
+.tm-progress-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--lv-charcoal);
+  border-radius: var(--lv-radius-pill);
+  /* Animate fill growth when progress updates */
+  transition: width 320ms var(--lv-ease-out);
+}
+
+/* ---------------------------------------------------------------------
+   Dashboard + Tasks tab
+   --------------------------------------------------------------------- */
+
+/* Minimal black pill action button */
+.tm-pill-btn {
+  border: none;
+  background-color: var(--lv-charcoal);
+  color: var(--lv-off-white);
+  border-radius: var(--lv-radius-pill);
+  padding: 9px 20px;
+  font-size: 0.9rem;
+  box-shadow: var(--lv-inset-shadow);
+  transition: transform 140ms var(--lv-ease-out), opacity 140ms var(--lv-ease-out);
+}
+.tm-pill-btn:hover { opacity: 0.92; }
+.tm-pill-btn:active { transform: scale(0.97); }
+
+/* Empty / informational state */
+.tm-empty {
+  border: 1px dashed var(--lv-border-strong);
+  border-radius: var(--lv-radius-card);
+  color: var(--lv-muted);
+  padding: 28px 20px;
+  text-align: center;
+}
+
+/* Grouped task lists (Tasks tab + dashboard) */
+.tm-task-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tm-task-group-title { font-weight: 600; letter-spacing: -0.4px; color: var(--lv-charcoal); }
+
+.tm-task-rows {
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  overflow: hidden;
+}
+.tm-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--lv-border);
+  padding: 12px 14px;
+  color: var(--lv-charcoal);
+  transition: background-color 120ms var(--lv-ease-out);
+}
+.tm-task-row:last-child { border-bottom: none; }
+.tm-task-row:hover { background-color: var(--lv-charcoal-04); }
+.tm-task-row:active { background-color: var(--lv-charcoal-04); }
+.tm-task-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tm-task-row-title { font-weight: 500; }
+.tm-task-row-meta { font-size: 0.8rem; color: var(--lv-muted); }
+.tm-task-row--more { justify-content: center; color: var(--lv-muted); font-size: 0.85rem; }
+
+.tm-status-pill {
+  border: 1px solid var(--lv-border);
+  font-weight: 400;
+}
+
+/* Deadline tracker */
+.tm-deadline-group { margin-bottom: 14px; }
+.tm-deadline-group:last-child { margin-bottom: 0; }
+.tm-deadline-label {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+.tm-deadline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--lv-radius-pill);
+  background-color: var(--lv-charcoal-40);
+  margin-right: 8px;
+}
+.tm-deadline-dot.is-overdue { background-color: #be123c; }
+.tm-deadline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0 6px 16px;
+  border-top: 1px solid var(--lv-border);
+}
+
+/* Notifications form */
+.tm-notif-list { display: flex; flex-direction: column; }
+.tm-notif-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--lv-border);
+}
+.tm-notif-item:last-child { border-bottom: none; }
+.tm-notif-item.is-unread .tm-notif-message { font-weight: 600; color: var(--lv-charcoal); }
+.tm-notif-message { color: var(--lv-charcoal-82); }
+
+/* ---------------------------------------------------------------------
+   Auth screen (login / change password)
+   --------------------------------------------------------------------- */
+.tm-auth {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.tm-auth-card {
+  width: 100%;
+  max-width: 400px;
+}
+.tm-auth-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--lv-radius-md);
+  background-color: var(--lv-charcoal);
+  color: var(--lv-off-white);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.15rem;
+  box-shadow: var(--lv-inset-shadow);
+  margin-bottom: 20px;
+}
+.tm-auth-title {
+  font-size: 1.6rem;
+  letter-spacing: -0.9px;
+  margin-bottom: 4px;
+}
+.tm-auth-sub { color: var(--lv-muted); margin-bottom: 24px; }
+.tm-auth .form-control { padding-top: 10px; padding-bottom: 10px; }
+.tm-auth-card .card-body { padding: 32px; }
+
+/* ---------------------------------------------------------------------
+   Global rhythm refinements
+   --------------------------------------------------------------------- */
+/* Page heading scale: confident but not shouting (impeccable: control by
+   weight + spacing, not raw size). */
+h2 { font-size: 1.6rem; }
+@media (min-width: 768px) { h2 { font-size: 1.85rem; } }
+
+/* Cards get a hair more interior room for breathing space. */
+.card-body { padding: 1.25rem; }
+
+/* Quiet entrance for primary content so navigation doesn't feel abrupt.
+   Opacity-only — safe under headless renders and reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  main > .container,
+  .tm-page-enter {
+    animation: tm-fade-in 240ms var(--lv-ease-out) both;
+  }
+}
+@keyframes tm-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

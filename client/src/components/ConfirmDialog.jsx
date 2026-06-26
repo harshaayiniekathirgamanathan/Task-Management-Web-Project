@@ -1,4 +1,3 @@
-import React from 'react';
 import { Modal, Button } from 'react-bootstrap';
 
 // A reusable "are you sure?" dialog.

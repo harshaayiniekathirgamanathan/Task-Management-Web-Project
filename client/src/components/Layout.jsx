@@ -22,6 +22,10 @@ export default function Layout() {
             <Nav className="me-auto">
               <Nav.Link as={Link} to="/">Dashboard</Nav.Link>
               <Nav.Link as={Link} to="/projects">Projects</Nav.Link>
+              {/* Tasks tab for project managers and collaborators (admins aren't assigned tasks) */}
+              {user?.role !== 'admin' && (
+                <Nav.Link as={Link} to="/tasks">Tasks</Nav.Link>
+              )}
               {/* Users link only shows for admins */}
               {user?.role === 'admin' && (
                 <Nav.Link as={Link} to="/users">Users</Nav.Link>
@@ -41,9 +45,11 @@ export default function Layout() {
       </Navbar>
 
       {/* Each page shows here, below the navbar */}
-      <Container className="mt-4">
-        <Outlet />
-      </Container>
+      <main>
+        <Container className="mt-4 tm-page-enter">
+          <Outlet />
+        </Container>
+      </main>
     </>
   );
 }

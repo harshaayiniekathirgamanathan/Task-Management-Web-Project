@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Container, Row, Col,
     Card, Button,
@@ -148,8 +148,31 @@ export default function ProjectsPage() {
                                     </Card.Text>
 
                                     <Card.Text className="text-muted small mb-3">
-                                        Created: {new Date(project.created_at).toLocaleDateString()}
+                                        Created by {project.creator_name || 'Unknown'}
+                                        {' · '}
+                                        {new Date(project.created_at).toLocaleDateString()}
                                     </Card.Text>
+
+                                    {/* Task completion progress */}
+                                    <div className="mb-3">
+                                        <div className="d-flex justify-content-between align-items-baseline mb-1">
+                                            <span className="small text-muted">Progress</span>
+                                            <span className="small fw-semibold">
+                                                {project.progress ?? 0}%
+                                            </span>
+                                        </div>
+                                        <div className="tm-progress-track" role="progressbar"
+                                            aria-valuenow={project.progress ?? 0}
+                                            aria-valuemin={0} aria-valuemax={100}>
+                                            <div
+                                                className="tm-progress-fill"
+                                                style={{ width: `${project.progress ?? 0}%` }}
+                                            />
+                                        </div>
+                                        <div className="small text-muted mt-1">
+                                            {project.completed_tasks ?? 0} of {project.total_tasks ?? 0} tasks done
+                                        </div>
+                                    </div>
 
                                     <Button
                                         variant="outline-primary"

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { useState } from 'react';
+import { Card, Form, Button, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../api/auth'; // <-- real API call
@@ -52,59 +52,51 @@ export default function LoginPage() {
     }
 
     return (
-        <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
-            <Row className="w-100 justify-content-center">
-                <Col md={8} lg={5} xl={4}>
-                    <Card className="shadow border-0 rounded-4 p-4">
-                        <Card.Body>
-                            <h2 className="text-center mb-4 fw-bold text-primary">Task Manager</h2>
+        <div className="tm-auth">
+            <Card className="tm-auth-card shadow-sm">
+                <Card.Body>
+                    <div className="tm-auth-mark" aria-hidden="true">T</div>
+                    <h1 className="tm-auth-title">Welcome back</h1>
+                    <p className="tm-auth-sub">Sign in to your workspace.</p>
 
-                            {/* Error banner — shown when error is non-empty */}
-                            {error && (
-                                <Alert variant="danger" onClose={() => setError('')} dismissible>
-                                    {error}
-                                </Alert>
-                            )}
+                    {error && (
+                        <Alert variant="danger" onClose={() => setError('')} dismissible>
+                            {error}
+                        </Alert>
+                    )}
 
-                            <Form onSubmit={handleSubmit}>
-                                {/* Email */}
-                                <Form.Group className="mb-3" controlId="loginEmail">
-                                    <Form.Label className="fw-semibold">Email address</Form.Label>
-                                    <Form.Control
-                                        type="email"
-                                        placeholder="name@example.com"
-                                        className="py-2"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </Form.Group>
+                    <Form onSubmit={handleSubmit}>
+                        <Form.Group className="mb-3" controlId="loginEmail">
+                            <Form.Label>Email</Form.Label>
+                            <Form.Control
+                                type="email"
+                                placeholder="name@gmail.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </Form.Group>
 
-                                {/* Password */}
-                                <Form.Group className="mb-3" controlId="loginPassword">
-                                    <Form.Label className="fw-semibold">Password</Form.Label>
-                                    <Form.Control
-                                        type="password"
-                                        placeholder="Enter password"
-                                        className="py-2"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                </Form.Group>
+                        <Form.Group className="mb-4" controlId="loginPassword">
+                            <Form.Label>Password</Form.Label>
+                            <Form.Control
+                                type="password"
+                                placeholder="Enter password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </Form.Group>
 
-                                {/* Button is disabled while the request is in-flight */}
-                                <Button
-                                    variant="primary"
-                                    type="submit"
-                                    className="w-100 mt-3 py-2 fw-semibold shadow-sm"
-                                    disabled={loading}
-                                >
-                                    {loading ? 'Logging in…' : 'Log in'}
-                                </Button>
-                            </Form>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-        </Container>
+                        <Button
+                            variant="primary"
+                            type="submit"
+                            className="w-100"
+                            disabled={loading}
+                        >
+                            {loading ? 'Signing in…' : 'Sign in'}
+                        </Button>
+                    </Form>
+                </Card.Body>
+            </Card>
+        </div>
     );
 }
