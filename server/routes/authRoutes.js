@@ -8,7 +8,11 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  // Max login attempts per IP per window. 10 was too low for demos/testing with
+  // several accounts; configurable via env so production can tighten it.
+  max: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 30,
+  standardHeaders: true,
+  legacyHeaders: false,
   handler: (req, res) => {
     res.status(429).json({
       code: 429,
