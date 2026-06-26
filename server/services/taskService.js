@@ -56,6 +56,14 @@ async function isUserAssigned(taskId, userId) {
   return !!data;
 }
 
+// Can this user add comments / upload files to this task?
+// Managers and admins always may; a collaborator only on tasks assigned to them.
+async function canModifyTask(taskId, user) {
+  if (!user) return false;
+  if (user.role === 'project_manager' || user.role === 'admin') return true;
+  return isUserAssigned(taskId, user.id);
+}
+
 // Confirm a list of ids are all real users (else throw 400).
 async function assertUsersExist(uniqueIds) {
   if (uniqueIds.length === 0) return;
@@ -341,4 +349,5 @@ module.exports = {
   updateTask,
   updateTaskStatus,
   deleteTask,
+  canModifyTask,
 };

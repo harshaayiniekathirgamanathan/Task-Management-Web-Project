@@ -42,6 +42,10 @@
   --lv-soft-shadow: rgba(0, 0, 0, 0.06) 0px 4px 16px;
   --lv-ring: rgba(59, 130, 246, 0.5);
 
+  /* --- Motion (strong custom curves; built-in CSS easings are too weak) --- */
+  --lv-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --lv-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
   /* --- Type --- */
   --lv-font: 'Camera Plain Variable', ui-sans-serif, system-ui, -apple-system,
     'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -245,3 +249,114 @@ hr { border-color: var(--lv-border); opacity: 1; }
 }
 .modal-header,
 .modal-footer { border-color: var(--lv-border); }
+
+/* ---------------------------------------------------------------------
+   Kanban board — drag & drop between status columns
+   --------------------------------------------------------------------- */
+.tm-column {
+  background-color: var(--lv-charcoal-03);
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-container);
+  padding: 12px;
+  height: 100%;
+  /* Animate only the boundary cue; transform/opacity stay free for cards */
+  transition: background-color 160ms var(--lv-ease-out),
+    box-shadow 160ms var(--lv-ease-out);
+}
+/* Active drop target — a clear, calm "you can drop here" cue */
+.tm-column.is-over {
+  background-color: var(--lv-charcoal-04);
+  box-shadow: inset 0 0 0 1.5px var(--lv-border-strong);
+}
+
+.tm-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 4px 12px;
+}
+.tm-column-title {
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--lv-charcoal);
+}
+.tm-column-count {
+  min-width: 22px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--lv-muted);
+  background-color: var(--lv-charcoal-04);
+  border-radius: var(--lv-radius-pill);
+  padding: 1px 8px;
+}
+
+/* The draggable wrapper around a card */
+.tm-draggable { touch-action: none; }
+.tm-draggable:focus-visible { outline: none; }
+.tm-draggable:focus-visible .card {
+  box-shadow: 0 0 0 2px var(--lv-ring);
+}
+
+/* Card press + lift feedback (only on real pointers, never on touch taps) */
+@media (hover: hover) and (pointer: fine) {
+  .tm-draggable[data-can-drag='true'] .card {
+    cursor: grab;
+    transition: transform 160ms var(--lv-ease-out),
+      box-shadow 160ms var(--lv-ease-out);
+  }
+  .tm-draggable[data-can-drag='true']:hover .card {
+    box-shadow: var(--lv-soft-shadow);
+  }
+  .tm-draggable[data-can-drag='true'] .card:active { transform: scale(0.985); }
+}
+
+/* The floating clone that follows the cursor while dragging */
+.tm-card-overlay {
+  cursor: grabbing;
+  transform: rotate(2deg);
+}
+.tm-card-overlay .card {
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 12px 28px;
+  border-color: var(--lv-border-strong);
+}
+
+/* Empty-column hint */
+.tm-column-empty {
+  border: 1px dashed var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  color: var(--lv-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 18px 8px;
+}
+
+/* ---------------------------------------------------------------------
+   Label "+" trigger + quick-add popover
+   --------------------------------------------------------------------- */
+.tm-label-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: var(--lv-radius-pill);
+  border: 1px dashed var(--lv-border-strong);
+  background: transparent;
+  color: var(--lv-muted);
+  line-height: 1;
+  font-size: 0.95rem;
+  transition: transform 140ms var(--lv-ease-out),
+    color 140ms var(--lv-ease-out), border-color 140ms var(--lv-ease-out);
+}
+.tm-label-add:hover { color: var(--lv-charcoal); border-color: var(--lv-charcoal); }
+.tm-label-add:active { transform: scale(0.92); }
+
+.tm-label-pop.popover {
+  background-color: var(--lv-cream);
+  border: 1px solid var(--lv-border);
+  border-radius: var(--lv-radius-card);
+  box-shadow: var(--lv-focus-shadow);
+}
+.tm-label-pop .popover-arrow::after { border-top-color: var(--lv-cream); }
+.tm-label-pop .popover-body { padding: 10px; }

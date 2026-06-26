@@ -16,7 +16,15 @@ import { addComment, listComments } from '../api/comments';
 import { listAttachments, uploadAttachment } from '../api/attachments';
 import { attachLabel, listLabels, removeLabel } from '../api/labels';
 
-const TaskDetailModal = ({ show, onClose, task, projectId, onTaskUpdated }) => {
+const TaskDetailModal = ({
+    show,
+    onClose,
+    task,
+    projectId,
+    onTaskUpdated,
+    canEdit = false,
+    canManageLabels = false,
+}) => {
     const [comment, setComment] = useState('');
     const [comments, setComments] = useState([]);
     const [attachments, setAttachments] = useState([]);
@@ -218,37 +226,51 @@ const TaskDetailModal = ({ show, onClose, task, projectId, onTaskUpdated }) => {
                                 )}
                             </ListGroup>
 
-                            <Form.Group className="mb-2">
-                                <Form.Label>Add comment</Form.Label>
+                            {canEdit ? (
+                                <>
+                                    <Form.Group className="mb-2">
+                                        <Form.Label>Add comment</Form.Label>
 
-                                <Form.Control
-                                    as="textarea"
-                                    rows={3}
-                                    value={comment}
-                                    onChange={(event) => setComment(event.target.value)}
-                                    placeholder="Write a comment..."
-                                />
-                            </Form.Group>
+                                        <Form.Control
+                                            as="textarea"
+                                            rows={3}
+                                            value={comment}
+                                            onChange={(event) => setComment(event.target.value)}
+                                            placeholder="Write a comment..."
+                                        />
+                                    </Form.Group>
 
-                            <Button
-                                onClick={handleAddComment}
-                                disabled={saving || !comment.trim()}
-                            >
-                                Add
-                            </Button>
+                                    <Button
+                                        onClick={handleAddComment}
+                                        disabled={saving || !comment.trim()}
+                                    >
+                                        Add
+                                    </Button>
+                                </>
+                            ) : (
+                                <p className="text-muted small mb-0">
+                                    Only members assigned to this task can comment.
+                                </p>
+                            )}
                         </Tab>
 
                         <Tab eventKey="files" title="Files">
-                            <Form.Group className="mb-3">
-                                <Form.Label>Upload a file</Form.Label>
+                            {canEdit ? (
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Upload a file</Form.Label>
 
-                                <Form.Control
-                                    key={fileInputKey}
-                                    type="file"
-                                    onChange={handleFileChange}
-                                    disabled={saving}
-                                />
-                            </Form.Group>
+                                    <Form.Control
+                                        key={fileInputKey}
+                                        type="file"
+                                        onChange={handleFileChange}
+                                        disabled={saving}
+                                    />
+                                </Form.Group>
+                            ) : (
+                                <p className="text-muted small">
+                                    Only members assigned to this task can upload files.
+                                </p>
+                            )}
 
                             <ListGroup>
                                 {attachments.length > 0 ? (
@@ -289,14 +311,16 @@ const TaskDetailModal = ({ show, onClose, task, projectId, onTaskUpdated }) => {
                                                 {label.name}
                                             </Badge>
 
-                                            <Button
-                                                variant="outline-danger"
-                                                size="sm"
-                                                disabled={saving}
-                                                onClick={() => handleRemoveLabel(label.id)}
-                                            >
-                                                Remove
-                                            </Button>
+                                            {canManageLabels && (
+                                                <Button
+                                                    variant="outline-danger"
+                                                    size="sm"
+                                                    disabled={saving}
+                                                    onClick={() => handleRemoveLabel(label.id)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
                                         </span>
                                     ))
                                 ) : (
@@ -304,25 +328,31 @@ const TaskDetailModal = ({ show, onClose, task, projectId, onTaskUpdated }) => {
                                 )}
                             </div>
 
-                            <Dropdown onSelect={handleAddLabel}>
-                                <Dropdown.Toggle
-                                    variant="outline-primary"
-                                    disabled={saving || availableLabels.length === 0}
-                                >
-                                    Add label
-                                </Dropdown.Toggle>
+                            {canManageLabels ? (
+                                <Dropdown onSelect={handleAddLabel}>
+                                    <Dropdown.Toggle
+                                        variant="outline-primary"
+                                        disabled={saving || availableLabels.length === 0}
+                                    >
+                                        Add label
+                                    </Dropdown.Toggle>
 
-                                <Dropdown.Menu>
-                                    {availableLabels.map(label => (
-                                        <Dropdown.Item
-                                            key={label.id}
-                                            eventKey={label.id}
-                                        >
-                                            {label.name}
-                                        </Dropdown.Item>
-                                    ))}
-                                </Dropdown.Menu>
-                            </Dropdown>
+                                    <Dropdown.Menu>
+                                        {availableLabels.map(label => (
+                                            <Dropdown.Item
+                                                key={label.id}
+                                                eventKey={label.id}
+                                            >
+                                                {label.name}
+                                            </Dropdown.Item>
+                                        ))}
+                                    </Dropdown.Menu>
+                                </Dropdown>
+                            ) : (
+                                <p className="text-muted small mb-0">
+                                    Only project managers and admins can manage labels.
+                                </p>
+                            )}
                         </Tab>
                     </Tabs>
                 )}
