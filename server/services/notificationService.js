@@ -1,4 +1,4 @@
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 const { emitToUser } = require('../sockets/io');
 
 const ALLOWED_TYPES = [
@@ -22,24 +22,12 @@ async function createNotification(
     throw err;
   }
 
-  const { data: notification, error } = await supabase
-    .from('notifications')
-    .insert([
-      {
-        user_id: userId,
-        task_id: taskId,
-        type,
-        message,
-        is_read: false,
-        is_delivered: false,
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
+  const notification = await db.one(
+    `INSERT INTO notifications (user_id, task_id, type, message, is_read, is_delivered)
+     VALUES ($1, $2, $3, $4, false, false)
+     RETURNING *`,
+    [userId, taskId, type, message]
+  );
 
   try {
     const { getIO } = require('../sockets/io');
@@ -61,10 +49,9 @@ async function createNotification(
         created_at: notification.created_at,
       });
 
-      await supabase
-        .from('notifications')
-        .update({ is_delivered: true })
-        .eq('id', notification.id);
+      await db.query('UPDATE notifications SET is_delivered = true WHERE id = $1', [
+        notification.id,
+      ]);
 
       notification.is_delivered = true;
     }

@@ -1,41 +1,25 @@
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 
 const loginUser = async (email, password) => {
-  // Fetch user from Supabase
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('email', email)
-    .single();
+  const user = await db.one('SELECT * FROM users WHERE email = $1', [email]);
 
-  if (error || !user) {
+  if (!user || user.is_active === false) {
     throw { status: 401, message: 'Invalid credentials' };
   }
 
-  // Check if user is active
-  if (user.is_active === false) {
-    throw { status: 401, message: 'Invalid credentials' };
-  }
-
-  // Compare passwords
   const isMatch = await bcrypt.compare(password, user.password_hash);
   if (!isMatch) {
     throw { status: 401, message: 'Invalid credentials' };
   }
 
-  // Return user row on success
   return user;
 };
 
 const getUserById = async (id) => {
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const user = await db.one('SELECT * FROM users WHERE id = $1', [id]);
 
-  if (error || !user || user.is_active === false) {
+  if (!user || user.is_active === false) {
     throw { status: 401, message: 'User not found or inactive' };
   }
 
@@ -43,56 +27,39 @@ const getUserById = async (id) => {
 };
 
 const storeRefreshToken = async (token, userId, expiresAt) => {
-  const { error } = await supabase
-    .from('refresh_tokens')
-    .insert([{ token, user_id: userId, expires_at: expiresAt }]);
-
-  if (error) {
+  try {
+    await db.query(
+      'INSERT INTO refresh_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)',
+      [token, userId, expiresAt]
+    );
+  } catch (err) {
     throw { status: 500, message: 'Failed to store refresh token' };
   }
 };
 
 const findRefreshToken = async (token) => {
-  const { data, error } = await supabase
-    .from('refresh_tokens')
-    .select('*')
-    .eq('token', token)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-  return data;
+  return db.one('SELECT * FROM refresh_tokens WHERE token = $1', [token]);
 };
 
 const deleteRefreshToken = async (token) => {
-  await supabase
-    .from('refresh_tokens')
-    .delete()
-    .eq('token', token);
+  await db.query('DELETE FROM refresh_tokens WHERE token = $1', [token]);
 };
 
 const revokeAllOtherRefreshTokens = async (userId, currentRefreshToken) => {
-  let query = supabase
-    .from('refresh_tokens')
-    .delete()
-    .eq('user_id', userId);
-
   if (currentRefreshToken) {
-    query = query.neq('token', currentRefreshToken);
+    await db.query(
+      'DELETE FROM refresh_tokens WHERE user_id = $1 AND token <> $2',
+      [userId, currentRefreshToken]
+    );
+  } else {
+    await db.query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
   }
-
-  await query;
 };
 
 const changePassword = async (userId, currentPassword, newPassword, currentRefreshToken) => {
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  const user = await db.one('SELECT * FROM users WHERE id = $1', [userId]);
 
-  if (error || !user) {
+  if (!user) {
     throw { status: 404, message: 'User not found' };
   }
 
@@ -107,12 +74,12 @@ const changePassword = async (userId, currentPassword, newPassword, currentRefre
   const salt = await bcrypt.genSalt(10);
   const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
-  const { error: updateError } = await supabase
-    .from('users')
-    .update({ password_hash: hashedNewPassword, must_reset_password: false })
-    .eq('id', userId);
-
-  if (updateError) {
+  try {
+    await db.query(
+      'UPDATE users SET password_hash = $1, must_reset_password = false, updated_at = NOW() WHERE id = $2',
+      [hashedNewPassword, userId]
+    );
+  } catch (err) {
     throw { status: 500, message: 'Failed to update password' };
   }
 
@@ -127,5 +94,5 @@ module.exports = {
   findRefreshToken,
   deleteRefreshToken,
   revokeAllOtherRefreshTokens,
-  changePassword
+  changePassword,
 };

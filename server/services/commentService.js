@@ -1,19 +1,17 @@
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 const { createNotification } = require('./notificationService');
 
 // Get all comments for a task
 async function listComments(taskId) {
-  const { data, error } = await supabase
-    .from('comments')
-    .select('id, content, created_at, author:users ( id, name )')
-    .eq('task_id', taskId)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+  return db.many(
+    `SELECT c.id, c.content, c.created_at,
+            json_build_object('id', u.id, 'name', u.name) AS author
+       FROM comments c
+       JOIN users u ON u.id = c.user_id
+      WHERE c.task_id = $1
+      ORDER BY c.created_at ASC`,
+    [taskId]
+  );
 }
 
 // Add a comment to a task
@@ -24,29 +22,20 @@ async function addComment(taskId, userId, content) {
     throw err;
   }
 
-  const { data, error } = await supabase
-    .from('comments')
-    .insert([
-      {
-        task_id: taskId,
-        user_id: userId,
-        content,
-      },
-    ])
-    .select()
-    .single();
+  const comment = await db.one(
+    `INSERT INTO comments (task_id, user_id, content)
+     VALUES ($1, $2, $3)
+     RETURNING *`,
+    [taskId, userId, content]
+  );
 
-  if (error) {
-    throw error;
-  }
+  // Step 4.9 — notify the other people assigned to this task
+  const assignees = await db.many(
+    'SELECT user_id FROM task_assignments WHERE task_id = $1',
+    [taskId]
+  );
 
-    // Step 4.9 — notify the other people assigned to this task
-  const { data: assignees } = await supabase
-    .from('task_assignments')
-    .select('user_id')
-    .eq('task_id', taskId);
-
-  for (const a of assignees || []) {
+  for (const a of assignees) {
     if (a.user_id === userId) continue; // don't notify the comment author
     try {
       await createNotification(
@@ -60,7 +49,7 @@ async function addComment(taskId, userId, content) {
     }
   }
 
-  return data;
+  return comment;
 }
 
 module.exports = {
