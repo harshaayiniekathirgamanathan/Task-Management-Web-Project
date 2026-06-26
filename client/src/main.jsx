@@ -7,6 +7,8 @@ import { SocketProvider } from './context/SocketContext.jsx';
 // Bootstrap styles — imported once here so the whole app is styled
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
+// Lovable-inspired theme — loaded last so it overrides Bootstrap defaults
+import './styles/lovable-theme.css';
 
 import AppRoutes from './AppRoutes.jsx';
 
