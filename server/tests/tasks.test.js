@@ -3,6 +3,10 @@
 // (a manager and a collaborator), log in through the real /api/auth/login
 // endpoint to get tokens, then exercise the task rules. Everything created
 // is removed again in afterAll.
+//
+// Because they need a live database, they run locally (where .env holds real
+// credentials) but are SKIPPED in CI, which has no database. To run them in CI
+// (e.g. a nightly job with real secrets), set RUN_DB_TESTS=true.
 require('dotenv').config();
 
 const request = require('supertest');
@@ -32,7 +36,11 @@ async function login(email, password) {
   return res.body.accessToken; // <-- this token is sent as "Authorization: Bearer <token>"
 }
 
-describe('Tasks API', () => {
+// Skip this live-DB suite in CI unless explicitly opted in with real creds.
+const dbTestsEnabled = process.env.RUN_DB_TESTS === 'true' || !process.env.CI;
+const describeDb = dbTestsEnabled ? describe : describe.skip;
+
+describeDb('Tasks API', () => {
   const PASSWORD = 'Password123';
   const stamp = Date.now();
 

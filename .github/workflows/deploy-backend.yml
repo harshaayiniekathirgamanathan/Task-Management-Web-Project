@@ -1,0 +1,58 @@
+name: Deploy Backend (Azure App Service)
+
+# Deploys the Express API in server/ to Azure App Service for Linux.
+# Triggers on pushes to main that touch the server, or manually.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  # Name of the provisioned Azure Web App (see docs/AZURE_DEPLOYMENT.md).
+  AZURE_WEBAPP_NAME: task-manager-api-cfe737
+  NODE_VERSION: 20
+
+jobs:
+  build-and-deploy:
+    name: Build & deploy API
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install production dependencies
+        working-directory: server
+        run: npm ci --omit=dev
+
+      - name: Run tests
+        working-directory: server
+        run: npm test
+        env:
+          NODE_ENV: test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          JWT_SECRET: test-jwt-secret
+          JWT_REFRESH_SECRET: test-jwt-refresh-secret
+          CLIENT_URL: http://localhost:5173
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          # Publish profile is stored as a repo secret (see deployment guide).
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: server
