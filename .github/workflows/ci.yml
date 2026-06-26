@@ -17,6 +17,24 @@ jobs:
   server:
     name: Server – lint & test
     runs-on: ubuntu-latest
+    # Ephemeral Postgres so the integration suite runs for real in CI.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: taskmanager
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/taskmanager
+      DATABASE_SSL: disable
     defaults:
       run:
         working-directory: server
@@ -33,14 +51,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Load database schema
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/schema.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260623120000_add_refresh_tokens.sql
+
       - name: Run tests
         run: npm test
         env:
           NODE_ENV: test
-          # Dummy values so modules that read env at import time don't throw.
-          # Real secrets are never needed in CI; tests should not hit a live DB.
-          SUPABASE_URL: https://example.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          # Run the live-DB integration suite against the Postgres service above.
+          RUN_DB_TESTS: 'true'
           JWT_SECRET: test-jwt-secret
           JWT_REFRESH_SECRET: test-jwt-refresh-secret
           CLIENT_URL: http://localhost:5173

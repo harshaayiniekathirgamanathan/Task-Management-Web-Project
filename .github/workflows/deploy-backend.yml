@@ -38,13 +38,13 @@ jobs:
         working-directory: server
         run: npm ci
 
+      # Runs the mocked unit suites only — the live-DB integration tests skip
+      # without RUN_DB_TESTS, and the lazy pool means no DATABASE_URL is needed.
       - name: Run tests
         working-directory: server
         run: npm test
         env:
           NODE_ENV: test
-          SUPABASE_URL: https://example.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
           JWT_SECRET: test-jwt-secret
           JWT_REFRESH_SECRET: test-jwt-refresh-secret
           CLIENT_URL: http://localhost:5173
