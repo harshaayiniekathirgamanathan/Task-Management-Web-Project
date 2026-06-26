@@ -14,7 +14,7 @@ describe('emailService', () => {
             ...originalEnv,
             NODE_ENV: 'test',
             SMTP_HOST: 'smtp.gmail.com',
-            SMTP_PORT: '587',
+            SMTP_PORT: '465',
             SMTP_USER: 'sender@gmail.com',
             SMTP_PASS: 'abcd efgh ijkl mnop',
             MAIL_FROM: '',
@@ -39,8 +39,9 @@ describe('emailService', () => {
         expect(nodemailer.createTransport).toHaveBeenCalledWith(
             expect.objectContaining({
                 host: 'smtp.gmail.com',
-                port: 587,
-                secure: false,
+                port: 465,
+                secure: true,
+                family: 4,
                 auth: {
                     user: 'sender@gmail.com',
                     pass: 'abcdefghijklmnop',

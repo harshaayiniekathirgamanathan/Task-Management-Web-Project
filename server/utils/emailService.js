@@ -40,14 +40,16 @@ const sendOnboardingEmail = async (to, name, tempPassword) => {
         port: smtpPort,
         // STARTTLS on 587, implicit TLS on 465
         secure: smtpPort === 465,
+        // Gmail SMTP can hang on some IPv6/network paths; prefer IPv4.
+        family: 4,
         auth: {
             user: smtpUser,
             pass: smtpPass,
         },
         // Fail fast instead of hanging on an unreachable/blocked SMTP host.
-        connectionTimeout: 10000, // 10s to establish the TCP connection
-        greetingTimeout: 10000,   // 10s to receive the SMTP greeting
-        socketTimeout: 15000,     // 15s of socket inactivity
+        connectionTimeout: 30000, // 30s to establish the TCP connection
+        greetingTimeout: 30000,   // 30s to receive the SMTP greeting
+        socketTimeout: 30000,     // 30s of socket inactivity
     });
 
     const mailOptions = {
