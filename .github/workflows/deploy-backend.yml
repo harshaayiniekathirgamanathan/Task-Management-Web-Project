@@ -34,9 +34,9 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
-      - name: Install production dependencies
+      - name: Install dependencies
         working-directory: server
-        run: npm ci --omit=dev
+        run: npm ci
 
       - name: Run tests
         working-directory: server
@@ -48,6 +48,11 @@ jobs:
           JWT_SECRET: test-jwt-secret
           JWT_REFRESH_SECRET: test-jwt-refresh-secret
           CLIENT_URL: http://localhost:5173
+
+      # Tests pass — strip devDependencies so only production deps ship.
+      - name: Prune dev dependencies
+        working-directory: server
+        run: npm prune --omit=dev
 
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
