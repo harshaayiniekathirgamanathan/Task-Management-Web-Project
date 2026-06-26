@@ -2,6 +2,10 @@ const supabase = require('../utils/supabase');
 const bcrypt = require('bcryptjs');
 const emailService = require('../utils/emailService');
 
+function normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
 const listUsers = async ({ search, role, active }) => {
     let query = supabase
         .from('users')
@@ -52,10 +56,12 @@ const listAssignableUsers = async ({ excludeUserId } = {}) => {
 };
 
 const createUser = async ({ name, email, role }) => {
+    const normalizedEmail = normalizeEmail(email);
+
     const { data: existingUser } = await supabase
         .from('users')
         .select('id')
-        .eq('email', email)
+        .eq('email', normalizedEmail)
         .single();
 
     if (existingUser) {
@@ -75,7 +81,7 @@ const createUser = async ({ name, email, role }) => {
         .insert([
             {
                 name,
-                email,
+                email: normalizedEmail,
                 role,
                 password_hash: passwordHash,
                 is_active: true,
@@ -89,21 +95,18 @@ const createUser = async ({ name, email, role }) => {
         throw { status: 500, message: 'Failed to create user' };
     }
 
-    // Email the temporary password to the NEW USER only.
-    // Flow: admin creates the user -> user gets the temp password by email
-    // -> user logs in with it and is forced to reset. The admin never sees it.
-    //
-    // IMPORTANT: fire-and-forget. We do NOT await it, so a slow or unreachable
-    // SMTP server can never block (or 60s-stall) the API response.
-    emailService
-        .sendOnboardingEmail(email, name, tempPassword)
-        .catch((err) => {
-            // Never leak the password in production logs.
-            console.error(`Onboarding email to ${email} failed: ${err.message}`);
-            if (process.env.NODE_ENV !== 'production') {
-                console.log(`[dev] Temp password for ${email}: ${tempPassword}`);
-            }
-        });
+    // The temporary password is only useful if the recipient receives it. Wait
+    // for SMTP and roll back the user row if delivery fails immediately.
+    try {
+        await emailService.sendOnboardingEmail(normalizedEmail, name, tempPassword);
+    } catch (err) {
+        await supabase.from('users').delete().eq('id', newUser.id);
+        console.error(`Onboarding email to ${normalizedEmail} failed: ${err.message}`);
+        throw {
+            status: err.status || 502,
+            message: 'User was not created because the onboarding email could not be sent. Check SMTP settings and try again.',
+        };
+    }
 
     // Return ONLY the user (contract: 201 {id,name,email,role,...}).
     // The temp password is intentionally NOT returned — it goes to the inbox.
