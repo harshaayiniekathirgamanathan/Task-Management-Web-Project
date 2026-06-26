@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Form, Badge, Alert } from 'react-bootstrap';
 import DeadlineCalendar from './DeadlineCalendar';
 

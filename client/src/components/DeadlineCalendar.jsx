@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 // Compact, dependency-free month calendar for picking a task deadline.
 // Works entirely in local time and emits a `YYYY-MM-DD` string (or '' when

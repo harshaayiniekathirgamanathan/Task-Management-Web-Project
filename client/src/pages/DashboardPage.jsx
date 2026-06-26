@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Row, Col, Card, Button, Spinner, Badge } from 'react-bootstrap';
+import { Row, Col, Card, Spinner, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { listTasks } from '../api/tasks';
@@ -75,7 +75,6 @@ export default function DashboardPage() {
 
         load();
         return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, isAdmin]);
 
     const unreadCount = notifications.filter((n) => !n.is_read).length;

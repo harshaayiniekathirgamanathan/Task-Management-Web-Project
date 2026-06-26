@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Card, Badge, Overlay, Popover, Form, Button, Spinner } from 'react-bootstrap';
 import { createLabel, attachLabel, listLabels } from '../api/labels';
 
@@ -36,7 +36,7 @@ const TaskCard = ({
     const [labelName, setLabelName] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const addBtnRef = useRef(null);
+    const [addButton, setAddButton] = useState(null);
 
     const formattedDate = task.due_date
         ? new Date(task.due_date).toLocaleDateString()
@@ -109,7 +109,7 @@ const TaskCard = ({
                         <>
                             <button
                                 type="button"
-                                ref={addBtnRef}
+                                ref={setAddButton}
                                 className="tm-label-add"
                                 aria-label="Add label"
                                 title="Add label"
@@ -125,7 +125,7 @@ const TaskCard = ({
 
                             <Overlay
                                 show={showPop}
-                                target={addBtnRef.current}
+                                target={addButton}
                                 placement="bottom"
                                 rootClose
                                 onHide={() => setShowPop(false)}
