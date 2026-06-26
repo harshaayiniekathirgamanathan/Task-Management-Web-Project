@@ -64,13 +64,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Advisory for now: the existing source has pre-existing lint violations.
-      # Failures are surfaced in the logs but don't block the pipeline. Remove
-      # `continue-on-error` once the existing violations are cleaned up to make
-      # linting a hard gate.
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Build
         run: npm run build
