@@ -165,7 +165,7 @@ az webapp config appsettings set --resource-group $RG --name $APP_NAME --setting
   SUPABASE_SERVICE_ROLE_KEY="<supabase-service-role-key>" \
   JWT_SECRET="<long-random>" \
   JWT_REFRESH_SECRET="<different-long-random>" \
-  LOGIN_RATE_LIMIT_MAX=5 \
+  LOGIN_RATE_LIMIT_MAX=30 \
   SMTP_HOST="<smtp-host>" SMTP_PORT=587 \
   SMTP_USER="<smtp-user>" SMTP_PASS="<smtp-pass>" \
   MAIL_FROM="Task Manager <no-reply@example.com>"
