@@ -198,7 +198,16 @@ export default function UsersPage() {
                 <Col xs={12} md={6}>
                     <Form.Label className="fw-semibold">Search</Form.Label>
                     <InputGroup>
-                        <InputGroup.Text>🔍</InputGroup.Text>
+                        <InputGroup.Text>
+                            <svg
+                                width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" strokeWidth="2"
+                                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.3-4.3" />
+                            </svg>
+                        </InputGroup.Text>
                         <Form.Control
                             id="userSearch"
                             type="text"

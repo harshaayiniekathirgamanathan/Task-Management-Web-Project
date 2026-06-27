@@ -1,7 +1,7 @@
-/* Minimal base reset. All visual styling lives in the Lovable theme
-   (styles/lovable-theme.css), which is loaded after Bootstrap. This file
+/* Minimal base reset. All visual styling lives in the Expo theme
+   (styles/expo-theme.css), which is loaded after Bootstrap. This file
    only normalises the document so the theme + Bootstrap containers control
-   width, alignment, and color — no leftover template scaffolding. */
+   width, alignment, and color. */
 
 :root {
   /* The app is a single, committed light (parchment) theme. */

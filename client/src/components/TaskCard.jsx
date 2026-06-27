@@ -3,19 +3,20 @@ import { Card, Badge, Overlay, Popover, Form, Button, Spinner } from 'react-boot
 import { createLabel, attachLabel, listLabels } from '../api/labels';
 
 // A small, stable palette so auto-assigned label colors stay on-theme.
-const LABEL_COLORS = ['#1c1c1c', '#5f5f5d', '#b45309', '#15803d', '#1d4ed8', '#7c3aed', '#be123c'];
+const LABEL_COLORS = ['#171717', '#60646c', '#b45309', '#15803d', '#1d4ed8', '#7c3aed', '#be123c'];
 const colorForName = (name) => {
     let hash = 0;
     for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
     return LABEL_COLORS[hash % LABEL_COLORS.length];
 };
 
-const getPriorityVariant = (priority) => {
+// Priority reads through the monochrome ramp: high earns the black voltage,
+// medium a quiet surface pill, low a hairline outline.
+const priorityClass = (priority) => {
     switch (priority?.toLowerCase()) {
-        case 'high': return 'danger';
-        case 'medium': return 'warning';
-        case 'low': return 'secondary';
-        default: return 'primary';
+        case 'high': return 'tm-priority tm-priority--high';
+        case 'medium': return 'tm-priority tm-priority--medium';
+        default: return 'tm-priority tm-priority--low';
     }
 };
 
@@ -88,9 +89,9 @@ const TaskCard = ({
                 {/* Top Row: Title and Priority Badge */}
                 <div className="d-flex justify-content-between align-items-start mb-2">
                     <Card.Title className="h6 mb-0">{task.title}</Card.Title>
-                    <Badge bg={getPriorityVariant(task.priority)}>
+                    <span className={priorityClass(task.priority)}>
                         {task.priority || 'None'}
-                    </Badge>
+                    </span>
                 </div>
 
                 {/* Labels row — chips plus the "+" quick-add (managers/admins only) */}
@@ -188,8 +189,7 @@ const TaskCard = ({
                         {(task.assignees || []).map((assignee) => (
                             <span
                                 key={assignee.id}
-                                className="rounded-circle bg-secondary text-white d-inline-flex justify-content-center align-items-center ms-1"
-                                style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}
+                                className="tm-avatar ms-1"
                                 title={assignee.name}
                             >
                                 {getInitials(assignee.name)}
