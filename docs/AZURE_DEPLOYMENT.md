@@ -14,6 +14,40 @@ fully Azure-hosted deployment with automated CI/CD via GitHub Actions.
 | File attachments | Supabase Storage                     | **Azure Blob Storage**                          |
 | Email            | SMTP (Gmail)                         | SMTP or Azure Communication Services Email      |
 
+## Deployment diagram
+
+The current production deployment uses the following services and delivery
+paths:
+
+```mermaid
+flowchart TB
+    User["Web Browser"]
+
+    subgraph GitHub["GitHub"]
+        Repo["Task Management Repository"]
+        CI["GitHub Actions CI/CD"]
+        Repo --> CI
+    end
+
+    subgraph Azure["Microsoft Azure"]
+        SWA["Azure Static Web Apps<br/>React + Vite Frontend"]
+        API["Azure App Service<br/>Node.js + Express API"]
+        DB[("Azure PostgreSQL<br/>Flexible Server")]
+        Blob[("Azure Blob Storage<br/>Task Attachments")]
+    end
+
+    Gmail["Gmail SMTP<br/>Onboarding Emails"]
+
+    User -->|"HTTPS"| SWA
+    SWA -->|"REST API + WebSocket"| API
+    API -->|"SQL over TLS"| DB
+    API -->|"Upload / Download"| Blob
+    API -->|"SMTP TLS"| Gmail
+
+    CI -->|"Deploy frontend"| SWA
+    CI -->|"Deploy backend"| API
+```
+
 ### Important architectural note
 
 The backend does **not** talk to Postgres with raw SQL. It uses
