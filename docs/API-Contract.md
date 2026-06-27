@@ -13,6 +13,7 @@ GET   /api/users?search=&role=&active=  → [{id,name,email,role,is_active,creat
 POST  /api/users        {name,email,role} → 201 {id,name,email,role}   (also emails a temp password)
 PATCH /api/users/:id    {name?,role?}     → {user}
 PATCH /api/users/:id/deactivate           → {user}
+PATCH /api/users/:id/activate             → {user}
 ```
 **Projects** (Member 3)
 ```

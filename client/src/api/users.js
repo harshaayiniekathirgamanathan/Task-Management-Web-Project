@@ -38,3 +38,9 @@ export async function deactivateUser(id) {
     const response = await axiosClient.patch(`/api/users/${id}/deactivate`);
     return response.data; // shape: { message: "User deactivated" }
 }
+
+// PATCH /api/users/:id/activate — mark a user as active
+export async function activateUser(id) {
+    const response = await axiosClient.patch(`/api/users/${id}/activate`);
+    return response.data;
+}

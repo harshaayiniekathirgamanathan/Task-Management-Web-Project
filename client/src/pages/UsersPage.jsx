@@ -7,7 +7,7 @@ import {
 } from 'react-bootstrap';
 import UserFormModal from '../components/UserFormModal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { listUsers, createUser, updateUser, deactivateUser } from '../api/users';
+import { listUsers, createUser, updateUser, deactivateUser, activateUser } from '../api/users';
 
 function roleBadgeVariant(role) {
     if (role === 'admin') return 'primary';
@@ -48,7 +48,7 @@ export default function UsersPage() {
 
     // --- ConfirmDialog state ---
     const [showConfirm, setShowConfirm] = useState(false);
-    const [userToDeactivate, setUserToDeactivate] = useState(null);
+    const [userToToggle, setUserToToggle] = useState(null);
 
     // ---- Fetch helpers ----
     const fetchUsers = useCallback(async (searchVal, roleVal) => {
@@ -129,33 +129,39 @@ export default function UsersPage() {
         }
     }
 
-    // ---- Deactivate handlers ----
-    function handleDeactivateClick(user) {
-        setUserToDeactivate(user);
+    // ---- Activate/deactivate handlers ----
+    function handleStatusClick(user) {
+        setUserToToggle(user);
         setActionMsg('');
         setActionErr('');
         setShowConfirm(true);
     }
 
-    async function handleConfirmDeactivate() {
+    async function handleConfirmStatusChange() {
         setShowConfirm(false);
         setActionLoading(true);
         try {
-            await deactivateUser(userToDeactivate.id);
-            setActionMsg(`User "${userToDeactivate.name}" deactivated.`);
+            if (userToToggle.is_active) {
+                await deactivateUser(userToToggle.id);
+                setActionMsg(`User "${userToToggle.name}" deactivated.`);
+            } else {
+                await activateUser(userToToggle.id);
+                setActionMsg(`User "${userToToggle.name}" re-activated.`);
+            }
             fetchUsers(search, roleFilter); // refresh the table
         } catch (err) {
-            const serverMsg = err.response?.data?.message || 'Could not deactivate user.';
+            const action = userToToggle.is_active ? 'deactivate' : 're-activate';
+            const serverMsg = err.response?.data?.message || `Could not ${action} user.`;
             setActionErr(serverMsg);
         } finally {
-            setUserToDeactivate(null);
+            setUserToToggle(null);
             setActionLoading(false);
         }
     }
 
     function handleConfirmClose() {
         setShowConfirm(false);
-        setUserToDeactivate(null);
+        setUserToToggle(null);
     }
 
     return (
@@ -288,14 +294,25 @@ export default function UsersPage() {
                                         >
                                             Edit
                                         </Button>
-                                        <Button
-                                            variant="outline-danger"
-                                            size="sm"
-                                            onClick={() => handleDeactivateClick(u)}
-                                            disabled={actionLoading}
-                                        >
-                                            Deactivate
-                                        </Button>
+                                        {u.is_active ? (
+                                            <Button
+                                                variant="outline-danger"
+                                                size="sm"
+                                                onClick={() => handleStatusClick(u)}
+                                                disabled={actionLoading}
+                                            >
+                                                Deactivate
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="outline-success"
+                                                size="sm"
+                                                onClick={() => handleStatusClick(u)}
+                                                disabled={actionLoading}
+                                            >
+                                                Re-activate
+                                            </Button>
+                                        )}
                                     </td>
                                 </tr>
                             ))
@@ -313,11 +330,14 @@ export default function UsersPage() {
                 loading={actionLoading}
             />
 
-            {/* ConfirmDialog — shown before deactivating */}
+            {/* ConfirmDialog — shown before changing a user's active status */}
             <ConfirmDialog
                 show={showConfirm}
-                message={`Deactivate "${userToDeactivate?.name}"? They will no longer be able to log in.`}
-                onConfirm={handleConfirmDeactivate}
+                message={userToToggle?.is_active
+                    ? `Deactivate "${userToToggle.name}"? They will no longer be able to log in.`
+                    : `Re-activate "${userToToggle?.name}"? They will be able to log in again.`
+                }
+                onConfirm={handleConfirmStatusChange}
                 onClose={handleConfirmClose}
             />
         </Container>
