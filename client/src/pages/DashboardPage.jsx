@@ -127,7 +127,7 @@ export default function DashboardPage() {
     return (
         <div>
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-                <h2 className="mb-0">Welcome back, {user?.name || 'there'} 👋</h2>
+                <h2 className="mb-0">Welcome back, {user?.name || 'there'}.</h2>
                 <button className="tm-pill-btn" onClick={() => navigate(action.to)}>
                     {action.label}
                 </button>
@@ -137,10 +137,10 @@ export default function DashboardPage() {
             <Row className="g-3 mb-4">
                 {stats.map((stat) => (
                     <Col key={stat.label} xs={12} md={4}>
-                        <Card className="text-center shadow-sm">
+                        <Card>
                             <Card.Body>
-                                <Card.Title className="display-6">{stat.value}</Card.Title>
-                                <Card.Text className="text-muted">{stat.label}</Card.Text>
+                                <div className="tm-stat-value">{stat.value}</div>
+                                <div className="text-muted mt-1">{stat.label}</div>
                             </Card.Body>
                         </Card>
                     </Col>

@@ -52,8 +52,7 @@ const TaskTable = ({ tasks = [] }) => {
                                     {task.assignees?.map(a => (
                                         <span
                                             key={a.id}
-                                            className="rounded-circle bg-secondary text-white d-inline-flex justify-content-center align-items-center me-1"
-                                            style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}
+                                            className="tm-avatar me-1"
                                             title={a.name}
                                         >
                                             {getInitials(a.name)}

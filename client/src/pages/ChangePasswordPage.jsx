@@ -65,7 +65,7 @@ export default function ChangePasswordPage() {
                 <Col md={8} lg={6} xl={5}>
                     <Card className="shadow border-0 rounded-4 p-4">
                         <Card.Body>
-                            <h2 className="text-center mb-4 fw-bold text-primary">Change Password</h2>
+                            <h2 className="text-center mb-4">Change Password</h2>
 
                             {/* Status banner — shown only after a submit attempt */}
                             {status && (
