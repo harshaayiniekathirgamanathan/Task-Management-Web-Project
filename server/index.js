@@ -21,6 +21,10 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const { startDeadlineReminderJob } = require('./jobs/deadlineReminders');
 const app = express();
 
+// Azure App Service terminates requests at a reverse proxy. Trust its single
+// proxy hop so IP-based middleware identifies the actual client.
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 

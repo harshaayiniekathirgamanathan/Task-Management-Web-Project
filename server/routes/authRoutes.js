@@ -13,6 +13,7 @@ const loginLimiter = rateLimit({
   max: Number(process.env.LOGIN_RATE_LIMIT_MAX) || 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   handler: (req, res) => {
     res.status(429).json({
       code: 429,
