@@ -199,4 +199,28 @@ router.patch(
  */
 router.patch('/:id/deactivate', userController.deactivateUser);
 
+/**
+ * @swagger
+ * /api/users/{id}/activate:
+ *   patch:
+ *     summary: Re-activate a user (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User re-activated successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.patch('/:id/activate', userController.activateUser);
+
 module.exports = router;

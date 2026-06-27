@@ -65,10 +65,23 @@ const deactivateUser = async (req, res) => {
     }
 };
 
+const activateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const activatedUser = await userService.activateUser(id);
+        res.json(activatedUser);
+    } catch (error) {
+        const status = error.status || 500;
+        const message = error.message || 'Internal server error';
+        res.status(status).json({ code: status, message });
+    }
+};
+
 module.exports = {
     listUsers,
     listAssignableUsers,
     createUser,
     updateUser,
-    deactivateUser
+    deactivateUser,
+    activateUser
 };

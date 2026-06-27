@@ -146,10 +146,23 @@ const deactivateUser = async (id) => {
     return deactivatedUser;
 };
 
+const activateUser = async (id) => {
+    try {
+        return await db.one(
+            `UPDATE users SET is_active = true, updated_at = NOW() WHERE id = $1
+             RETURNING id, name, email, role, is_active, created_at`,
+            [id]
+        );
+    } catch (err) {
+        throw { status: 500, message: 'Failed to activate user' };
+    }
+};
+
 module.exports = {
     listUsers,
     listAssignableUsers,
     createUser,
     updateUser,
     deactivateUser,
+    activateUser,
 };

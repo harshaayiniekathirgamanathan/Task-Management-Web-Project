@@ -10,6 +10,7 @@ jest.mock('../services/userService', () => ({
     createUser: jest.fn(),
     updateUser: jest.fn(),
     deactivateUser: jest.fn(),
+    activateUser: jest.fn(),
 }));
 
 const userService = require('../services/userService');
@@ -67,5 +68,34 @@ describe('Users API validation', () => {
             email: 'person@gmail.com',
             role: 'collaborator',
         });
+    });
+
+    it('allows an admin to re-activate a user', async () => {
+        userService.activateUser.mockResolvedValue({
+            id: 'inactive-user-id',
+            is_active: true,
+        });
+
+        const res = await request(app)
+            .patch('/api/users/inactive-user-id/activate')
+            .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(userService.activateUser).toHaveBeenCalledWith('inactive-user-id');
+        expect(res.body.is_active).toBe(true);
+    });
+
+    it('does not allow a non-admin to re-activate a user', async () => {
+        const collaboratorToken = jwt.sign(
+            { id: 'collaborator-id', role: 'collaborator' },
+            process.env.JWT_SECRET
+        );
+
+        const res = await request(app)
+            .patch('/api/users/inactive-user-id/activate')
+            .set('Authorization', `Bearer ${collaboratorToken}`);
+
+        expect(res.status).toBe(403);
+        expect(userService.activateUser).not.toHaveBeenCalled();
     });
 });

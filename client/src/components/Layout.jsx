@@ -16,7 +16,7 @@ export default function Layout() {
     <>
       <Navbar expand="lg">
         <Container>
-          <Navbar.Brand as={Link} to="/">Task Manager</Navbar.Brand>
+          <Navbar.Brand as={Link} to="/">TMS Solutions</Navbar.Brand>
           <Navbar.Toggle aria-controls="main-nav" />
           <Navbar.Collapse id="main-nav">
             <Nav className="me-auto">
