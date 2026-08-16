@@ -6,8 +6,36 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
 
-// Protect all userRoutes with auth and admin constraints
+const GMAIL_ADDRESS_REGEX = /^[^@\s]+@gmail\.com$/i;
+
+// Every user route requires login
 router.use(authMiddleware);
+
+/**
+ * @swagger
+ * /api/users/assignable:
+ *   get:
+ *     summary: List users who can be assigned to tasks (project_manager/admin only)
+ *     description: >
+ *       Returns active, non-admin users excluding the caller. Used to populate the
+ *       assignee picker when creating or editing a task.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of assignable users
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get(
+    '/assignable',
+    requireRole('project_manager', 'admin'),
+    userController.listAssignableUsers
+);
+
+// The remaining user-management routes are admin-only
 router.use(requireRole('admin'));
 
 /**
@@ -84,7 +112,17 @@ router.post(
     '/',
     [
         body('name').notEmpty().withMessage('Name is required'),
-        body('email').isEmail().withMessage('Valid email is required'),
+        body('email')
+            .trim()
+            .isEmail().withMessage('Valid email is required')
+            .bail()
+            .custom((value) => {
+                if (!GMAIL_ADDRESS_REGEX.test(value)) {
+                    throw new Error('Email must be a valid @gmail.com address');
+                }
+                return true;
+            })
+            .customSanitizer((value) => value.toLowerCase()),
         body('role').isIn(['admin', 'project_manager', 'collaborator']).withMessage('Role must be admin, project_manager, or collaborator')
     ],
     validate,
@@ -160,5 +198,29 @@ router.patch(
  *         description: Forbidden
  */
 router.patch('/:id/deactivate', userController.deactivateUser);
+
+/**
+ * @swagger
+ * /api/users/{id}/activate:
+ *   patch:
+ *     summary: Re-activate a user (admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User re-activated successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.patch('/:id/activate', userController.activateUser);
 
 module.exports = router;

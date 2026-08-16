@@ -2,6 +2,17 @@ const authService = require('../services/authService');
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 const jwt = require('jsonwebtoken');
 
+// Refresh-token cookie options. In production the frontend (e.g. Vercel) and the
+// API (e.g. Render) are on different domains, so the cookie must be SameSite=None
+// + Secure to be sent at all. Locally we use Lax so it still works over http.
+const isProd = process.env.NODE_ENV === 'production';
+const refreshCookieOptions = {
+  httpOnly: true,
+  sameSite: isProd ? 'none' : 'lax',
+  secure: isProd,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -9,11 +20,12 @@ const login = async (req, res) => {
     
     const token = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+
+    // Persist the refresh token so it can be revoked later (logout / compromise)
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await authService.storeRefreshToken(refreshToken, user.id, expiresAt);
+
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 
     const { password_hash, ...safeUser } = user;
     
@@ -36,15 +48,23 @@ const refresh = async (req, res) => {
     }
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    // The token must still exist in the DB — i.e. it wasn't logged out / revoked
+    const stored = await authService.findRefreshToken(refreshToken);
+    if (!stored) {
+      return res.status(401).json({ code: 401, message: 'Refresh token revoked' });
+    }
+
     const user = await authService.getUserById(decoded.id);
-    
+
+    // Rotate: invalidate the used token and issue + store a fresh one
+    await authService.deleteRefreshToken(refreshToken);
     const newAccessToken = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await authService.storeRefreshToken(newRefreshToken, user.id, expiresAt);
 
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie('refreshToken', newRefreshToken, refreshCookieOptions);
 
     res.json({ accessToken: newAccessToken });
   } catch (error) {
@@ -52,8 +72,18 @@ const refresh = async (req, res) => {
   }
 };
 
-const logout = (req, res) => {
-  res.clearCookie('refreshToken');
+const logout = async (req, res) => {
+  // Revoke the refresh token server-side so it can't be reused
+  const refreshToken = req.cookies?.refreshToken;
+  if (refreshToken) {
+    try { await authService.deleteRefreshToken(refreshToken); } catch (_) { /* ignore */ }
+  }
+  // clearCookie must use the same attributes (minus maxAge) or the browser won't clear it
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    sameSite: isProd ? 'none' : 'lax',
+    secure: isProd,
+  });
   res.status(204).end();
 };
 

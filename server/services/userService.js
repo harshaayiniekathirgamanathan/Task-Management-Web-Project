@@ -1,40 +1,65 @@
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const emailService = require('../utils/emailService');
 
+function normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
 const listUsers = async ({ search, role, active }) => {
-    let query = supabase
-        .from('users')
-        .select('id, name, email, role, is_active, created_at');
+    const where = [];
+    const params = [];
 
     if (search) {
-        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+        params.push(`%${search}%`);
+        where.push(`(name ILIKE $${params.length} OR email ILIKE $${params.length})`);
     }
-
     if (role) {
-        query = query.eq('role', role);
+        params.push(role);
+        where.push(`role = $${params.length}`);
     }
-
     if (active !== undefined) {
-        query = query.eq('is_active', active);
+        params.push(active);
+        where.push(`is_active = $${params.length}`);
     }
 
-    const { data: users, error } = await query;
+    const sql =
+        'SELECT id, name, email, role, is_active, created_at FROM users' +
+        (where.length ? ` WHERE ${where.join(' AND ')}` : '');
 
-    if (error) {
+    try {
+        return await db.many(sql, params);
+    } catch (err) {
         throw { status: 500, message: 'Failed to retrieve users' };
     }
+};
 
-    return users;
+// Users who can be assigned to tasks: active, non-admin, and never the caller.
+// (Admins can't be assigned; project managers shouldn't see themselves.)
+const listAssignableUsers = async ({ excludeUserId } = {}) => {
+    const params = [];
+    let sql =
+        "SELECT id, name, email, role FROM users WHERE is_active = true AND role <> 'admin'";
+
+    if (excludeUserId) {
+        params.push(excludeUserId);
+        sql += ` AND id <> $${params.length}`;
+    }
+    sql += ' ORDER BY name ASC';
+
+    try {
+        return await db.many(sql, params);
+    } catch (err) {
+        throw { status: 500, message: 'Failed to retrieve assignable users' };
+    }
 };
 
 const createUser = async ({ name, email, role }) => {
-    const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .single();
+    const normalizedEmail = normalizeEmail(email);
 
+    const existingUser = await db.one('SELECT id FROM users WHERE email = $1', [
+        normalizedEmail,
+    ]);
     if (existingUser) {
         throw { status: 400, message: 'Email already exists' };
     }
@@ -47,83 +72,97 @@ const createUser = async ({ name, email, role }) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(tempPassword, salt);
 
-    const { data: newUser, error } = await supabase
-        .from('users')
-        .insert([
-            {
-                name,
-                email,
-                role,
-                password_hash: passwordHash,
-                is_active: true,
-                must_reset_password: true
-            }
-        ])
-        .select('id, name, email, role, is_active, created_at, must_reset_password')
-        .single();
-
-    if (error) {
+    let newUser;
+    try {
+        newUser = await db.one(
+            `INSERT INTO users (name, email, role, password_hash, is_active, must_reset_password)
+             VALUES ($1, $2, $3, $4, true, true)
+             RETURNING id, name, email, role, is_active, created_at, must_reset_password`,
+            [name, normalizedEmail, role, passwordHash]
+        );
+    } catch (err) {
         throw { status: 500, message: 'Failed to create user' };
     }
 
-    // Send email, or print to console if no SMTP
+    // The temporary password is only useful if the recipient receives it. Wait
+    // for SMTP and roll back the user row if delivery fails immediately.
     try {
-        await emailService.sendOnboardingEmail(email, name, tempPassword);
+        await emailService.sendOnboardingEmail(normalizedEmail, name, tempPassword);
     } catch (err) {
-        console.error('Failed to send onboarding email, printing to console instead:');
-        console.log(`User: ${name} (${email}), Temp Password: ${tempPassword}`);
+        await db.query('DELETE FROM users WHERE id = $1', [newUser.id]);
+        console.error(`Onboarding email to ${normalizedEmail} failed: ${err.message}`);
+        throw {
+            status: err.status || 502,
+            message: 'User was not created because the onboarding email could not be sent. Check SMTP settings and try again.',
+        };
     }
 
-    return {
-        user: newUser,
-        tempPassword
-    };
+    // Return ONLY the user (contract: 201 {id,name,email,role,...}).
+    // The temp password is intentionally NOT returned — it goes to the inbox.
+    return newUser;
 };
 
 const updateUser = async (id, { name, role }) => {
-    const updates = {};
-    if (name !== undefined) updates.name = name;
-    if (role !== undefined) updates.role = role;
-    updates.updated_at = new Date().toISOString();
+    const sets = [];
+    const params = [];
+    if (name !== undefined) {
+        params.push(name);
+        sets.push(`name = $${params.length}`);
+    }
+    if (role !== undefined) {
+        params.push(role);
+        sets.push(`role = $${params.length}`);
+    }
+    sets.push('updated_at = NOW()');
+    params.push(id);
 
-    const { data: updatedUser, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', id)
-        .select('id, name, email, role, is_active, created_at')
-        .single();
-
-    if (error) {
+    try {
+        const updatedUser = await db.one(
+            `UPDATE users SET ${sets.join(', ')} WHERE id = $${params.length}
+             RETURNING id, name, email, role, is_active, created_at`,
+            params
+        );
+        return updatedUser;
+    } catch (err) {
         throw { status: 500, message: 'Failed to update user' };
     }
-
-    return updatedUser;
 };
 
 const deactivateUser = async (id) => {
-    const { data: deactivatedUser, error } = await supabase
-        .from('users')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select('id, name, email, role, is_active, created_at')
-        .single();
-
-    if (error) {
+    let deactivatedUser;
+    try {
+        deactivatedUser = await db.one(
+            `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1
+             RETURNING id, name, email, role, is_active, created_at`,
+            [id]
+        );
+    } catch (err) {
         throw { status: 500, message: 'Failed to deactivate user' };
     }
 
     // Force log out of all active sessions
-    await supabase
-        .from('refresh_tokens')
-        .delete()
-        .eq('user_id', id);
+    await db.query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
 
     return deactivatedUser;
 };
 
+const activateUser = async (id) => {
+    try {
+        return await db.one(
+            `UPDATE users SET is_active = true, updated_at = NOW() WHERE id = $1
+             RETURNING id, name, email, role, is_active, created_at`,
+            [id]
+        );
+    } catch (err) {
+        throw { status: 500, message: 'Failed to activate user' };
+    }
+};
+
 module.exports = {
     listUsers,
+    listAssignableUsers,
     createUser,
     updateUser,
-    deactivateUser
+    deactivateUser,
+    activateUser,
 };

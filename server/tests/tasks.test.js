@@ -1,8 +1,12 @@
 // Integration tests for the Tasks API (Jest + supertest).
-// These run against the real Supabase database: they seed two test users
-// (a manager and a collaborator), log in through the real /api/auth/login
-// endpoint to get tokens, then exercise the task rules. Everything created
-// is removed again in afterAll.
+// These run against a real PostgreSQL database (via DATABASE_URL): they seed two
+// test users (a manager and a collaborator), log in through the real
+// /api/auth/login endpoint to get tokens, then exercise the task rules.
+// Everything created is removed again in afterAll.
+//
+// Because they need a live database, they run wherever DATABASE_URL points at a
+// reachable Postgres. They are SKIPPED in CI by default; the CI workflow spins
+// up a Postgres service and opts in with RUN_DB_TESTS=true.
 require('dotenv').config();
 
 const request = require('supertest');
@@ -10,7 +14,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 const authRoutes = require('../routes/authRoutes');
 const taskRoutes = require('../routes/taskRoutes');
 const errorHandler = require('../middleware/errorHandler');
@@ -32,7 +36,12 @@ async function login(email, password) {
   return res.body.accessToken; // <-- this token is sent as "Authorization: Bearer <token>"
 }
 
-describe('Tasks API', () => {
+// Skip this live-DB suite in CI unless explicitly opted in (CI provides a
+// Postgres service container and sets RUN_DB_TESTS=true).
+const dbTestsEnabled = process.env.RUN_DB_TESTS === 'true' || !process.env.CI;
+const describeDb = dbTestsEnabled ? describe : describe.skip;
+
+describeDb('Tasks API', () => {
   const PASSWORD = 'Password123';
   const stamp = Date.now();
 
@@ -48,57 +57,43 @@ describe('Tasks API', () => {
     const password_hash = await bcrypt.hash(PASSWORD, 10);
 
     // 1. seed a manager and a collaborator
-    const { data: m, error: mErr } = await supabase
-      .from('users')
-      .insert({
-        name: 'Test Manager',
-        email: `test-pm-${stamp}@test.local`,
-        password_hash,
-        role: 'project_manager',
-        is_active: true,
-        must_reset_password: false,
-      })
-      .select('id, email')
-      .single();
-    if (mErr) throw mErr;
-    manager = m;
+    manager = await db.one(
+      `INSERT INTO users (name, email, password_hash, role, is_active, must_reset_password)
+       VALUES ('Test Manager', $1, $2, 'project_manager', true, false)
+       RETURNING id, email`,
+      [`test-pm-${stamp}@test.local`, password_hash]
+    );
 
-    const { data: c, error: cErr } = await supabase
-      .from('users')
-      .insert({
-        name: 'Test Collaborator',
-        email: `test-collab-${stamp}@test.local`,
-        password_hash,
-        role: 'collaborator',
-        is_active: true,
-        must_reset_password: false,
-      })
-      .select('id, email')
-      .single();
-    if (cErr) throw cErr;
-    collaborator = c;
+    collaborator = await db.one(
+      `INSERT INTO users (name, email, password_hash, role, is_active, must_reset_password)
+       VALUES ('Test Collaborator', $1, $2, 'collaborator', true, false)
+       RETURNING id, email`,
+      [`test-collab-${stamp}@test.local`, password_hash]
+    );
 
     // 2. a project + two tasks; collaborator is assigned to ONE of them
-    const { data: p } = await supabase
-      .from('projects')
-      .insert({ title: `Test project ${stamp}`, created_by: manager.id })
-      .select('id')
-      .single();
+    const p = await db.one(
+      `INSERT INTO projects (title, created_by) VALUES ($1, $2) RETURNING id`,
+      [`Test project ${stamp}`, manager.id]
+    );
     projectId = p.id;
 
-    const { data: t1 } = await supabase
-      .from('tasks')
-      .insert({ project_id: projectId, created_by: manager.id, title: 'Assigned task', priority: 'medium', status: 'todo' })
-      .select('id')
-      .single();
+    const t1 = await db.one(
+      `INSERT INTO tasks (project_id, created_by, title, priority, status)
+       VALUES ($1, $2, 'Assigned task', 'medium', 'todo') RETURNING id`,
+      [projectId, manager.id]
+    );
     assignedTaskId = t1.id;
-    await supabase.from('task_assignments').insert({ task_id: assignedTaskId, user_id: collaborator.id });
+    await db.query(
+      'INSERT INTO task_assignments (task_id, user_id) VALUES ($1, $2)',
+      [assignedTaskId, collaborator.id]
+    );
 
-    const { data: t2 } = await supabase
-      .from('tasks')
-      .insert({ project_id: projectId, created_by: manager.id, title: 'Other task', priority: 'medium', status: 'todo' })
-      .select('id')
-      .single();
+    const t2 = await db.one(
+      `INSERT INTO tasks (project_id, created_by, title, priority, status)
+       VALUES ($1, $2, 'Other task', 'medium', 'todo') RETURNING id`,
+      [projectId, manager.id]
+    );
     otherTaskId = t2.id;
 
     // 3. log in as both test users to get real tokens
@@ -108,9 +103,10 @@ describe('Tasks API', () => {
 
   afterAll(async () => {
     // deleting the project cascades its tasks + assignments
-    if (projectId) await supabase.from('projects').delete().eq('id', projectId);
-    if (manager) await supabase.from('users').delete().eq('id', manager.id);
-    if (collaborator) await supabase.from('users').delete().eq('id', collaborator.id);
+    if (projectId) await db.query('DELETE FROM projects WHERE id = $1', [projectId]);
+    if (manager) await db.query('DELETE FROM users WHERE id = $1', [manager.id]);
+    if (collaborator) await db.query('DELETE FROM users WHERE id = $1', [collaborator.id]);
+    await db.end();
   });
 
   it('logs in the seeded test users and returns access tokens', () => {
@@ -131,17 +127,36 @@ describe('Tasks API', () => {
     const res = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${managerToken}`)
-      .send({ project_id: projectId, title: 'Created in test', priority: 'high' });
+      .send({
+        project_id: projectId,
+        title: 'Created in test',
+        priority: 'high',
+        assignee_ids: [collaborator.id],
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('todo');
+  });
+
+  it('creating a task with no assignees is rejected -> 400', async () => {
+    const res = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ project_id: projectId, title: 'No assignees' });
+
+    expect(res.status).toBe(400);
   });
 
   it('a task with a past due_date is rejected -> 400', async () => {
     const res = await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${managerToken}`)
-      .send({ project_id: projectId, title: 'Late task', due_date: '2020-01-01' });
+      .send({
+        project_id: projectId,
+        title: 'Late task',
+        due_date: '2020-01-01',
+        assignee_ids: [collaborator.id],
+      });
 
     expect(res.status).toBe(400);
   });

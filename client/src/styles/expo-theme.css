@@ -1,0 +1,790 @@
+/* =====================================================================
+   Expo-inspired design system
+   ---------------------------------------------------------------------
+   A quiet, editorial developer-tool theme applied on top of Bootstrap so
+   every react-bootstrap screen inherits it. Pure white canvas, near-black
+   ink (#171717), and a single brand voltage: pure black (#000) on primary
+   CTAs. Hairline borders provide containment; one soft shadow tier only.
+   Inter carries the UI, JetBrains Mono carries data/metadata.
+   ===================================================================== */
+
+:root {
+  /* --- Core palette --- */
+  --ex-canvas: #ffffff;        /* page + card floor */
+  --ex-canvas-soft: #fafafa;   /* subtle alternating band */
+  --ex-ink: #171717;           /* display + emphasis */
+  --ex-body: #60646c;          /* running text (cool gray) */
+  --ex-muted: #999999;         /* sub-labels */
+  --ex-muted-soft: #cccccc;    /* disabled */
+
+  /* --- Brand voltage: pure black, CTAs only --- */
+  --ex-primary: #000000;
+  --ex-primary-active: #1a1a1a;
+  --ex-on-primary: #ffffff;
+  --ex-on-dark: #ffffff;
+
+  /* --- Inline link blue (body links only, never CTAs) --- */
+  --ex-link: #0d74ce;
+
+  /* --- Surfaces --- */
+  --ex-surface-strong: #f0f0f3;  /* badges, avatars, secondary hover */
+  --ex-surface-dark: #171717;    /* dark inversion */
+
+  /* --- Hairlines --- */
+  --ex-hairline: #f0f0f3;        /* default divider */
+  --ex-hairline-soft: #f5f5f7;   /* lighter divider */
+  --ex-hairline-strong: #dcdee0; /* visible card / input outline */
+
+  /* --- Radii (CTAs 8px, cards 12px; pills for badges/avatars only) --- */
+  --ex-radius-xs: 4px;
+  --ex-radius-sm: 6px;
+  --ex-radius-md: 8px;
+  --ex-radius-card: 12px;
+  --ex-radius-container: 16px;
+  --ex-radius-pill: 9999px;
+
+  /* --- Depth: single soft tier --- */
+  --ex-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --ex-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --ex-ring: rgba(0, 0, 0, 0.16);
+
+  /* --- Semantic (used scarcely, only for real state) --- */
+  --ex-overdue: #e5484d;
+
+  /* --- Motion (strong custom curves; built-in easings are too weak) --- */
+  --ex-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ex-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* --- Type --- */
+  --ex-font: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  --ex-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Map onto Bootstrap variables so components inherit it --- */
+  --bs-body-bg: var(--ex-canvas);
+  --bs-body-color: var(--ex-body);
+  --bs-body-font-family: var(--ex-font);
+  --bs-border-color: var(--ex-hairline-strong);
+  --bs-border-radius: var(--ex-radius-md);
+  --bs-emphasis-color: var(--ex-ink);
+  --bs-secondary-color: var(--ex-muted);
+  --bs-link-color: var(--ex-ink);
+  --bs-link-hover-color: var(--ex-ink);
+}
+
+/* ---------------------------------------------------------------------
+   Base surface + typography
+   --------------------------------------------------------------------- */
+body {
+  background-color: var(--ex-canvas);
+  color: var(--ex-body);
+  font-family: var(--ex-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--ex-font);
+  font-weight: 600;          /* Inter 600 reads cleaner than 700 for display */
+  color: var(--ex-ink);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+/* Negative tracking on display, easing off as size drops */
+h1, .h1 { letter-spacing: -1.44px; }
+h2, .h2 { letter-spacing: -1.08px; }
+h3, .h3 { letter-spacing: -0.84px; }
+h4, .h4 { letter-spacing: -0.5px; }
+h5, .h5, h6, .h6 { letter-spacing: -0.2px; }
+
+.text-muted,
+.text-secondary,
+small,
+.small {
+  color: var(--ex-muted) !important;
+}
+
+/* JetBrains Mono utility for data/metadata surfaces */
+.tm-mono { font-family: var(--ex-mono); font-feature-settings: 'tnum' 1; }
+
+/* ---------------------------------------------------------------------
+   Buttons — black primary, hairline ghosts. 8px radius across the board.
+   --------------------------------------------------------------------- */
+.btn {
+  font-family: var(--ex-font);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: var(--ex-radius-md);
+  padding: 9px 17px;
+  transition: background-color 0.14s ease, border-color 0.14s ease,
+    color 0.14s ease, transform 0.12s var(--ex-ease-out);
+}
+/* Tactile press feedback — the button visibly responds to the click. */
+.btn:active { transform: scale(0.97); }
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ex-ring);
+}
+.btn-sm { padding: 6px 12px; font-size: 0.8125rem; }
+.btn-lg { padding: 11px 22px; font-size: 0.9375rem; }
+
+/* Primary = pure black, the single brand voltage */
+.btn-primary {
+  --bs-btn-bg: var(--ex-primary);
+  --bs-btn-border-color: var(--ex-primary);
+  --bs-btn-color: var(--ex-on-primary);
+  --bs-btn-hover-bg: var(--ex-primary-active);
+  --bs-btn-hover-border-color: var(--ex-primary-active);
+  --bs-btn-hover-color: var(--ex-on-primary);
+  --bs-btn-active-bg: var(--ex-primary-active);
+  --bs-btn-active-border-color: var(--ex-primary-active);
+  --bs-btn-disabled-bg: var(--ex-muted-soft);
+  --bs-btn-disabled-border-color: var(--ex-muted-soft);
+}
+
+/* Ghost / outline = white surface, visible hairline-strong border */
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-dark,
+.btn-outline-light {
+  --bs-btn-color: var(--ex-ink);
+  --bs-btn-border-color: var(--ex-hairline-strong);
+  --bs-btn-bg: var(--ex-canvas);
+  --bs-btn-hover-bg: var(--ex-surface-strong);
+  --bs-btn-hover-color: var(--ex-ink);
+  --bs-btn-hover-border-color: var(--ex-hairline-strong);
+  --bs-btn-active-bg: var(--ex-surface-strong);
+  --bs-btn-active-color: var(--ex-ink);
+  --bs-btn-active-border-color: var(--ex-hairline-strong);
+}
+
+/* Secondary / light = quiet surface button */
+.btn-secondary,
+.btn-light {
+  --bs-btn-bg: var(--ex-surface-strong);
+  --bs-btn-border-color: var(--ex-surface-strong);
+  --bs-btn-color: var(--ex-ink);
+  --bs-btn-hover-bg: var(--ex-hairline-strong);
+  --bs-btn-hover-color: var(--ex-ink);
+  --bs-btn-hover-border-color: var(--ex-hairline-strong);
+}
+
+/* Destructive actions stay on-theme: black fill, the intent is set by context */
+.btn-danger {
+  --bs-btn-bg: var(--ex-primary);
+  --bs-btn-border-color: var(--ex-primary);
+  --bs-btn-color: var(--ex-on-primary);
+  --bs-btn-hover-bg: var(--ex-primary-active);
+  --bs-btn-hover-border-color: var(--ex-primary-active);
+}
+
+/* Inline blue text link — body links only */
+.btn-link { --bs-btn-color: var(--ex-link); --bs-btn-hover-color: var(--ex-link); }
+
+/* Pills are reserved for icon / toggle buttons, not primary CTAs */
+.btn.rounded-pill { border-radius: var(--ex-radius-pill); }
+
+/* ---------------------------------------------------------------------
+   Cards & containers — visible hairline borders, no heavy shadows
+   --------------------------------------------------------------------- */
+.card {
+  background-color: var(--ex-canvas);
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  box-shadow: none;
+}
+.card.rounded-4 { border-radius: var(--ex-radius-container); }
+
+.shadow, .shadow-sm, .shadow-lg {
+  box-shadow: var(--ex-shadow-soft) !important;
+}
+
+/* ---------------------------------------------------------------------
+   Inputs & forms — focus thickens to 2px ink
+   --------------------------------------------------------------------- */
+.form-control,
+.form-select {
+  background-color: var(--ex-canvas);
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-md);
+  color: var(--ex-ink);
+  padding: 10px 14px;
+}
+.form-control::placeholder { color: var(--ex-muted); opacity: 1; }
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--ex-canvas);
+  border-color: var(--ex-ink);
+  box-shadow: 0 0 0 3px var(--ex-ring);
+  color: var(--ex-ink);
+}
+.form-label { color: var(--ex-ink); font-weight: 500; }
+.form-check-input:checked {
+  background-color: var(--ex-primary);
+  border-color: var(--ex-primary);
+}
+.form-check-input:focus { box-shadow: 0 0 0 3px var(--ex-ring); border-color: var(--ex-ink); }
+
+/* ---------------------------------------------------------------------
+   Navigation — white bar, hairline base, ink links
+   --------------------------------------------------------------------- */
+.navbar {
+  background-color: var(--ex-canvas) !important;
+  border-bottom: 1px solid var(--ex-hairline-strong);
+  min-height: 64px;
+}
+.navbar .navbar-brand {
+  color: var(--ex-ink) !important;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+.navbar .nav-link {
+  color: var(--ex-body) !important;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-bottom: 2px solid transparent;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.navbar .nav-link:hover { color: var(--ex-ink) !important; }
+.navbar .nav-link.active {
+  color: var(--ex-ink) !important;
+  border-bottom-color: var(--ex-ink);
+}
+.navbar-toggler { border-color: var(--ex-hairline-strong); }
+.navbar-toggler:focus { box-shadow: 0 0 0 3px var(--ex-ring); }
+
+/* ---------------------------------------------------------------------
+   Links — ink, decoration carries the interactive signal
+   --------------------------------------------------------------------- */
+a {
+  color: var(--ex-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--ex-hairline-strong);
+}
+a:hover { color: var(--ex-ink); text-decoration-color: var(--ex-ink); }
+a.btn, .navbar-brand, .nav-link, .dropdown-item { text-decoration: none; }
+
+/* True inline body links opt into the blue accent */
+.tm-link { color: var(--ex-link); text-decoration-color: currentColor; }
+.tm-link:hover { color: var(--ex-link); }
+
+/* ---------------------------------------------------------------------
+   Tables, badges, dividers
+   --------------------------------------------------------------------- */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--ex-ink);
+  border-color: var(--ex-hairline);
+}
+.table > thead th {
+  color: var(--ex-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-bottom-color: var(--ex-hairline-strong);
+}
+.table > :not(caption) > * > * { border-bottom-color: var(--ex-hairline); }
+
+.badge {
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  border-radius: var(--ex-radius-pill);
+  padding: 0.32em 0.7em;
+}
+.badge.bg-secondary,
+.badge.bg-light {
+  background-color: var(--ex-surface-strong) !important;
+  color: var(--ex-ink) !important;
+}
+.badge.bg-danger { background-color: var(--ex-primary) !important; color: var(--ex-on-primary) !important; }
+
+hr { border-color: var(--ex-hairline); opacity: 1; }
+
+/* Modals & dropdowns inherit the white surface */
+.modal-content,
+.dropdown-menu {
+  background-color: var(--ex-canvas);
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  box-shadow: var(--ex-shadow-pop);
+}
+.modal-header,
+.modal-footer { border-color: var(--ex-hairline); }
+.dropdown-item:active { background-color: var(--ex-surface-strong); color: var(--ex-ink); }
+.dropdown-header { color: var(--ex-muted); font-weight: 600; }
+
+/* Alerts: quiet, hairline-bounded */
+.alert {
+  border-radius: var(--ex-radius-md);
+  border: 1px solid var(--ex-hairline-strong);
+}
+
+/* ---------------------------------------------------------------------
+   Reusable: priority pills + avatars
+   --------------------------------------------------------------------- */
+.tm-priority {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  border-radius: var(--ex-radius-pill);
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.tm-priority--high {            /* high earns the black voltage */
+  background-color: var(--ex-primary);
+  color: var(--ex-on-primary);
+}
+.tm-priority--medium {
+  background-color: var(--ex-surface-strong);
+  color: var(--ex-ink);
+}
+.tm-priority--low {
+  background-color: transparent;
+  color: var(--ex-muted);
+  border-color: var(--ex-hairline-strong);
+}
+
+.tm-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ex-radius-pill);
+  background-color: var(--ex-surface-strong);
+  border: 1px solid var(--ex-hairline-strong);
+  color: var(--ex-ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------------
+   Kanban board — drag & drop between status columns
+   --------------------------------------------------------------------- */
+.tm-column {
+  background-color: var(--ex-canvas-soft);
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-container);
+  padding: 12px;
+  height: 100%;
+  transition: background-color 160ms var(--ex-ease-out),
+    box-shadow 160ms var(--ex-ease-out);
+}
+.tm-column.is-over {
+  background-color: var(--ex-canvas);
+  box-shadow: inset 0 0 0 1.5px var(--ex-ink);
+}
+
+.tm-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 4px 12px;
+}
+.tm-column-title {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--ex-ink);
+}
+.tm-column-count {
+  min-width: 22px;
+  text-align: center;
+  font-family: var(--ex-mono);
+  font-size: 0.74rem;
+  color: var(--ex-muted);
+  background-color: var(--ex-surface-strong);
+  border-radius: var(--ex-radius-pill);
+  padding: 1px 8px;
+}
+
+.tm-draggable { touch-action: none; }
+.tm-draggable:focus-visible { outline: none; }
+.tm-draggable:focus-visible .card { box-shadow: 0 0 0 3px var(--ex-ring); }
+
+@media (hover: hover) and (pointer: fine) {
+  .tm-draggable[data-can-drag='true'] .card {
+    cursor: grab;
+    transition: transform 160ms var(--ex-ease-out),
+      box-shadow 160ms var(--ex-ease-out);
+  }
+  .tm-draggable[data-can-drag='true']:hover .card {
+    box-shadow: var(--ex-shadow-soft);
+  }
+  .tm-draggable[data-can-drag='true'] .card:active { transform: scale(0.985); }
+}
+
+.tm-card-overlay { cursor: grabbing; transform: rotate(2deg); }
+.tm-card-overlay .card {
+  box-shadow: var(--ex-shadow-pop);
+  border-color: var(--ex-ink);
+}
+
+.tm-column-empty {
+  border: 1px dashed var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  color: var(--ex-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 18px 8px;
+}
+
+/* ---------------------------------------------------------------------
+   Label "+" trigger + quick-add popover
+   --------------------------------------------------------------------- */
+.tm-label-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: var(--ex-radius-pill);
+  border: 1px dashed var(--ex-hairline-strong);
+  background: transparent;
+  color: var(--ex-muted);
+  line-height: 1;
+  font-size: 0.95rem;
+  transition: transform 140ms var(--ex-ease-out),
+    color 140ms var(--ex-ease-out), border-color 140ms var(--ex-ease-out);
+}
+.tm-label-add:hover { color: var(--ex-ink); border-color: var(--ex-ink); }
+.tm-label-add:active { transform: scale(0.92); }
+
+.tm-label-pop.popover {
+  background-color: var(--ex-canvas);
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  box-shadow: var(--ex-shadow-pop);
+}
+.tm-label-pop .popover-arrow::after { border-top-color: var(--ex-canvas); }
+.tm-label-pop .popover-body { padding: 10px; }
+
+/* ---------------------------------------------------------------------
+   Task form — deadline calendar
+   --------------------------------------------------------------------- */
+.tm-cal {
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  padding: 12px;
+  background-color: var(--ex-canvas);
+  max-width: 320px;
+}
+.tm-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tm-cal-title { font-weight: 600; letter-spacing: -0.2px; color: var(--ex-ink); }
+.tm-cal-nav {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-pill);
+  background: transparent;
+  color: var(--ex-ink);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: background-color 140ms var(--ex-ease-out), transform 140ms var(--ex-ease-out);
+}
+.tm-cal-nav:hover { background-color: var(--ex-surface-strong); }
+.tm-cal-nav:active { transform: scale(0.92); }
+
+.tm-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.tm-cal-weekdays { margin-bottom: 2px; }
+.tm-cal-weekday {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--ex-muted);
+  padding: 2px 0;
+}
+.tm-cal-day {
+  aspect-ratio: 1 / 1;
+  border: none;
+  background: transparent;
+  border-radius: var(--ex-radius-sm);
+  color: var(--ex-ink);
+  font-family: var(--ex-mono);
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms var(--ex-ease-out), color 120ms var(--ex-ease-out),
+    transform 120ms var(--ex-ease-out);
+}
+.tm-cal-day.is-empty { background: transparent; cursor: default; }
+.tm-cal-day:not(:disabled):not(.is-empty):hover { background-color: var(--ex-surface-strong); }
+.tm-cal-day:not(:disabled):active { transform: scale(0.9); }
+.tm-cal-day:disabled { color: var(--ex-muted-soft); cursor: not-allowed; }
+.tm-cal-day.is-today { box-shadow: inset 0 0 0 1px var(--ex-hairline-strong); }
+.tm-cal-day.is-selected {
+  background-color: var(--ex-primary);
+  color: var(--ex-on-primary);
+}
+.tm-cal-day.is-selected:hover { background-color: var(--ex-primary); }
+
+.tm-cal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ex-hairline);
+}
+.tm-cal-clear {
+  border: none;
+  background: transparent;
+  color: var(--ex-ink);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Task form — assignee picker
+   --------------------------------------------------------------------- */
+.tm-assignee-list {
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.tm-assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--ex-hairline);
+  transition: background-color 120ms var(--ex-ease-out);
+}
+.tm-assignee-row:last-child { border-bottom: none; }
+.tm-assignee-row:hover { background-color: var(--ex-surface-strong); }
+.tm-assignee-row.is-selected { background-color: var(--ex-surface-strong); }
+.tm-assignee-row .form-check { margin: 0; min-height: auto; }
+.tm-assignee-name { color: var(--ex-ink); }
+
+/* ---------------------------------------------------------------------
+   Progress bar — task completion (projects)
+   --------------------------------------------------------------------- */
+.tm-progress-track {
+  display: block;
+  width: 100%;
+  height: 6px;
+  background-color: var(--ex-surface-strong);
+  border-radius: var(--ex-radius-pill);
+  overflow: hidden;
+}
+.tm-progress-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--ex-ink);
+  border-radius: var(--ex-radius-pill);
+  transition: width 320ms var(--ex-ease-out);
+}
+
+/* ---------------------------------------------------------------------
+   Dashboard + Tasks tab
+   --------------------------------------------------------------------- */
+/* Primary action button — 8px radius (pills are for badges, not CTAs) */
+.tm-pill-btn {
+  border: none;
+  background-color: var(--ex-primary);
+  color: var(--ex-on-primary);
+  border-radius: var(--ex-radius-md);
+  padding: 9px 18px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 140ms var(--ex-ease-out), transform 120ms var(--ex-ease-out);
+}
+.tm-pill-btn:hover { background-color: var(--ex-primary-active); }
+.tm-pill-btn:active { transform: scale(0.97); }
+.tm-pill-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ex-ring); }
+
+.tm-empty {
+  border: 1px dashed var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  color: var(--ex-muted);
+  padding: 28px 20px;
+  text-align: center;
+}
+
+/* Stat figures read as data — mono, large, tight */
+.tm-stat-value {
+  font-family: var(--ex-mono);
+  font-size: 2.6rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--ex-ink);
+}
+
+.tm-task-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tm-task-group-title { font-weight: 600; letter-spacing: -0.2px; color: var(--ex-ink); }
+
+.tm-task-rows {
+  border: 1px solid var(--ex-hairline-strong);
+  border-radius: var(--ex-radius-card);
+  overflow: hidden;
+}
+.tm-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--ex-hairline);
+  padding: 12px 14px;
+  color: var(--ex-ink);
+  transition: background-color 120ms var(--ex-ease-out);
+}
+.tm-task-row:last-child { border-bottom: none; }
+.tm-task-row:hover { background-color: var(--ex-canvas-soft); }
+.tm-task-row:active { background-color: var(--ex-surface-strong); }
+.tm-task-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tm-task-row-title { font-weight: 500; }
+.tm-task-row-meta { font-size: 0.8rem; color: var(--ex-muted); }
+.tm-task-row--more { justify-content: center; color: var(--ex-body); font-size: 0.85rem; }
+
+.tm-status-pill {
+  border: 1px solid var(--ex-hairline-strong);
+  background-color: var(--ex-canvas) !important;
+  color: var(--ex-ink) !important;
+  font-weight: 500;
+}
+
+/* Deadline tracker */
+.tm-deadline-group { margin-bottom: 14px; }
+.tm-deadline-group:last-child { margin-bottom: 0; }
+.tm-deadline-label {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin-bottom: 6px;
+  color: var(--ex-ink);
+}
+.tm-deadline-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--ex-radius-pill);
+  background-color: var(--ex-muted);
+  margin-right: 8px;
+}
+.tm-deadline-dot.is-overdue { background-color: var(--ex-overdue); }
+.tm-deadline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0 6px 15px;
+  border-top: 1px solid var(--ex-hairline);
+}
+.tm-deadline-row .text-muted { font-family: var(--ex-mono); font-size: 0.78rem; }
+
+/* Notifications */
+.tm-notif-list { display: flex; flex-direction: column; }
+.tm-notif-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ex-hairline);
+}
+.tm-notif-item:last-child { border-bottom: none; }
+.tm-notif-item.is-unread .tm-notif-message { font-weight: 600; color: var(--ex-ink); }
+.tm-notif-message { color: var(--ex-ink); }
+
+/* Notification bell trigger in the navbar */
+.tm-bell { position: relative; display: inline-flex; align-items: center; color: var(--ex-body); }
+.tm-bell:hover { color: var(--ex-ink); }
+.tm-bell-count {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ex-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--ex-on-primary);
+  background-color: var(--ex-primary);
+  border-radius: var(--ex-radius-pill);
+}
+
+/* ---------------------------------------------------------------------
+   Auth screen (login / change password)
+   --------------------------------------------------------------------- */
+.tm-auth {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.tm-auth-card { width: 100%; max-width: 400px; }
+.tm-auth-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--ex-radius-md);
+  background-color: var(--ex-primary);
+  color: var(--ex-on-primary);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.15rem;
+  margin-bottom: 20px;
+}
+.tm-auth-title {
+  font-size: 1.6rem;
+  letter-spacing: -0.9px;
+  margin-bottom: 4px;
+}
+.tm-auth-sub { color: var(--ex-muted); margin-bottom: 24px; }
+.tm-auth .form-control { padding-top: 11px; padding-bottom: 11px; }
+.tm-auth-card .card-body { padding: 32px; }
+
+/* ---------------------------------------------------------------------
+   Global rhythm refinements
+   --------------------------------------------------------------------- */
+h2 { font-size: 1.6rem; }
+@media (min-width: 768px) { h2 { font-size: 1.9rem; } }
+
+.card-body { padding: 1.25rem; }
+
+/* Quiet entrance — opacity-led, safe under headless renders + reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  main > .container,
+  .tm-page-enter {
+    animation: tm-fade-in 240ms var(--ex-ease-out) both;
+  }
+}
+@keyframes tm-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  main > .container, .tm-page-enter { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}

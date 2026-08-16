@@ -1,83 +1,45 @@
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 
 // Get all labels for a project
 async function getLabels(projectId) {
-  const { data, error } = await supabase
-    .from('labels')
-    .select('id, name, color')
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: true });
-
-  if (error) throw error;
-
-  return data;
+  return db.many(
+    `SELECT id, name, color FROM labels
+      WHERE project_id = $1
+      ORDER BY created_at ASC`,
+    [projectId]
+  );
 }
 
 // Create a new label
 async function createLabel(projectId, userId, name, color) {
-  const { data, error } = await supabase
-    .from('labels')
-    .insert([
-      {
-        project_id: projectId,
-        created_by: userId,
-        name,
-        color,
-      },
-    ])
-    .select('id, name, color')
-    .single();
-
-  if (error) throw error;
-
-  return data;
+  return db.one(
+    `INSERT INTO labels (project_id, created_by, name, color)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, name, color`,
+    [projectId, userId, name, color]
+  );
 }
 
-// Attach label to task (Step 4.4 - Handles duplicate inserts gracefully)
+// Attach label to task. Idempotent: a duplicate is silently treated as success.
 async function attachLabel(taskId, labelId) {
-  const { data: existing, error: checkError } = await supabase
-    .from('task_labels')
-    .select('*')
-    .eq('task_id', taskId)
-    .eq('label_id', labelId)
-    .maybeSingle();
+  const inserted = await db.one(
+    `INSERT INTO task_labels (task_id, label_id)
+     VALUES ($1, $2)
+     ON CONFLICT (task_id, label_id) DO NOTHING
+     RETURNING task_id, label_id`,
+    [taskId, labelId]
+  );
 
-  if (checkError) throw checkError;
-  if (existing) {
-    return existing;
-  }
-
-  const { data, error } = await supabase
-    .from('task_labels')
-    .insert([
-      {
-        task_id: taskId,
-        label_id: labelId,
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === '23505') {
-      return { task_id: taskId, label_id: labelId };
-    }
-    throw error;
-  }
-
-  return data;
+  // null when the row already existed (ON CONFLICT DO NOTHING returns nothing).
+  return inserted || { task_id: taskId, label_id: labelId };
 }
 
 // Remove label from task
 async function removeLabel(taskId, labelId) {
-  const { error } = await supabase
-    .from('task_labels')
-    .delete()
-    .eq('task_id', taskId)
-    .eq('label_id', labelId);
-
-  if (error) throw error;
-
+  await db.query(
+    'DELETE FROM task_labels WHERE task_id = $1 AND label_id = $2',
+    [taskId, labelId]
+  );
   return { message: 'Label removed successfully' };
 }
 

@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 const { createNotification } = require('../services/notificationService');
 
 function startDeadlineReminderJob() {
@@ -11,39 +11,34 @@ function startDeadlineReminderJob() {
             const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
             // Fetch incomplete tasks due in the next 24 hours
-            const { data: tasks, error: tasksError } = await supabase
-                .from('tasks')
-                .select('id, title, due_date')
-                .neq('status', 'completed')
-                .gt('due_date', now.toISOString())
-                .lte('due_date', tomorrow.toISOString());
+            const tasks = await db.many(
+                `SELECT id, title, due_date
+                   FROM tasks
+                  WHERE status <> 'completed'
+                    AND due_date > $1
+                    AND due_date <= $2`,
+                [now.toISOString(), tomorrow.toISOString()]
+            );
 
-            if (tasksError) throw tasksError;
-
-            if (!tasks || tasks.length === 0) return;
+            if (!tasks.length) return;
 
             for (const task of tasks) {
                 // Get assignees for task
-                const { data: assignments, error: assigneesError } = await supabase
-                    .from('task_assignments')
-                    .select('user_id')
-                    .eq('task_id', task.id);
-
-                if (assigneesError || !assignments) continue;
+                const assignments = await db.many(
+                    'SELECT user_id FROM task_assignments WHERE task_id = $1',
+                    [task.id]
+                );
 
                 for (const assignment of assignments) {
                     const userId = assignment.user_id;
 
                     // Check if notification already exists to avoid duplicate spamming
-                    const { data: existing, error: checkError } = await supabase
-                        .from('notifications')
-                        .select('id')
-                        .eq('user_id', userId)
-                        .eq('task_id', task.id)
-                        .eq('type', 'deadline_approaching')
-                        .maybeSingle();
-
-                    if (checkError) continue;
+                    const existing = await db.one(
+                        `SELECT id FROM notifications
+                          WHERE user_id = $1 AND task_id = $2 AND type = 'deadline_approaching'
+                          LIMIT 1`,
+                        [userId, task.id]
+                    );
 
                     if (!existing) {
                         await createNotification(

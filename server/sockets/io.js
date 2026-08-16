@@ -33,28 +33,26 @@ function initSocket(server) {
 
     // Deliver missed notifications when user reconnects (Step 4.10)
     try {
-      const supabase = require('../utils/supabase');
-      const { data: missedNotifications, error } = await supabase
-        .from('notifications')
-        .select('id, type, message, task_id, created_at')
-        .eq('user_id', socket.userId)
-        .eq('is_delivered', false);
+      const db = require('../utils/db');
+      const missedNotifications = await db.many(
+        `SELECT id, type, message, task_id, created_at
+           FROM notifications
+          WHERE user_id = $1 AND is_delivered = false`,
+        [socket.userId]
+      );
 
-      if (!error && missedNotifications && missedNotifications.length > 0) {
-        for (const notification of missedNotifications) {
-          socket.emit('notification:new', {
-            id: notification.id,
-            type: notification.type,
-            message: notification.message,
-            task_id: notification.task_id,
-            created_at: notification.created_at,
-          });
+      for (const notification of missedNotifications) {
+        socket.emit('notification:new', {
+          id: notification.id,
+          type: notification.type,
+          message: notification.message,
+          task_id: notification.task_id,
+          created_at: notification.created_at,
+        });
 
-          await supabase
-            .from('notifications')
-            .update({ is_delivered: true })
-            .eq('id', notification.id);
-        }
+        await db.query('UPDATE notifications SET is_delivered = true WHERE id = $1', [
+          notification.id,
+        ]);
       }
     } catch (err) {
       console.error('Failed to deliver missed notifications on reconnect:', err.message);
