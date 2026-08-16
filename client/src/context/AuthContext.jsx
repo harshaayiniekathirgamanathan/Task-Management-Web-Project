@@ -9,14 +9,18 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true); // true until we've tried to restore the session
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('accessToken') || null;
+  });
+
+  const [loading, setLoading] = useState(true);
 
   function login(userData, newToken) {
     setUser(userData);
     setToken(newToken);
     setAuthToken(newToken);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('accessToken', newToken);
   }
 
   function logout() {
@@ -24,22 +28,32 @@ export function AuthProvider({ children }) {
     setToken(null);
     setAuthToken(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
   }
 
-  // On refresh: if a user was saved, use the refresh cookie to get a new token
   useEffect(() => {
     async function restoreSession() {
-      if (!localStorage.getItem('user')) {
+      const savedUser = localStorage.getItem('user');
+      const savedToken = localStorage.getItem('accessToken');
+
+      if (!savedUser) {
         setLoading(false);
         return;
       }
+
+      if (savedToken) {
+        setAuthToken(savedToken);
+      }
+
       try {
         const res = await axiosClient.post('/api/auth/refresh');
         const newToken = res.data.accessToken;
-        setToken(newToken);
-        setAuthToken(newToken);     // now axios has the token again
-      } catch {
-        logout();                   // cookie expired/missing → log out cleanly
+        if (newToken) {
+          setToken(newToken);
+          setAuthToken(newToken);
+        }
+      } catch (err) {
+        console.warn('Session refresh fallback using existing saved token:', err?.message);
       } finally {
         setLoading(false);
       }
@@ -49,8 +63,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, loading }}>
-      {/* Don't render pages until we've restored the token, or they'll fire 401s */}
-      {loading ? <div style={{ padding: '2rem' }}>Loading…</div> : children}
+      {loading ? <div style={{ padding: '2rem', color: '#fff' }}>Loading workspace session…</div> : children}
     </AuthContext.Provider>
   );
 }
