@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Form, Badge, Alert } from 'react-bootstrap';
 import DeadlineCalendar from './DeadlineCalendar';
+import { listAssignableUsers } from '../api/users';
 
 const ROLE_LABEL = {
     project_manager: 'Project Manager',
     collaborator: 'Collaborator',
+    admin: 'Administrator',
 };
 
 const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
@@ -15,7 +17,20 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
         due_date: '',
         assignees: [],
     });
+    const [localUsers, setLocalUsers] = useState([]);
     const [validationError, setValidationError] = useState('');
+
+    useEffect(() => {
+        if (show) {
+            if (users.length === 0) {
+                listAssignableUsers()
+                    .then(data => setLocalUsers(Array.isArray(data) ? data : data.data || []))
+                    .catch(err => console.warn('Local assignees fetch error:', err));
+            }
+        }
+    }, [show, users]);
+
+    const activeUserList = users.length > 0 ? users : localUsers;
 
     useEffect(() => {
         if (task) {
@@ -59,8 +74,6 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
 
     const selectedCount = formData.assignees.length;
 
-    // Build the payload the API expects, sending the deadline as end-of-day so
-    // a deadline picked for *today* isn't rejected as "in the past".
     const buildDueDate = useMemo(
         () => (dateStr) => (dateStr ? `${dateStr}T23:59:59` : null),
         []
@@ -73,11 +86,9 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
             setValidationError('Please enter a task title.');
             return;
         }
-        // Issue #5 — a task must have at least one assignee. The list only
-        // contains collaborators and project managers, so this also satisfies
-        // "at least one collaborator or project manager".
-        if (users.length > 0 && selectedCount === 0) {
-            setValidationError('Assign at least one collaborator or project manager.');
+
+        if (activeUserList.length > 0 && selectedCount === 0) {
+            setValidationError('Assign at least one team member to this task.');
             return;
         }
 
@@ -91,41 +102,45 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
     };
 
     return (
-        <Modal show={show} onHide={onClose} backdrop="static" size="lg">
+        <Modal show={show} onHide={onClose} backdrop="static" size="lg" className="dark-modal">
             <Form onSubmit={handleSubmit}>
                 <Modal.Header closeButton>
-                    <Modal.Title>{task ? 'Edit Task' : 'New Task'}</Modal.Title>
+                    <Modal.Title className="text-white fw-bold">{task ? 'Edit Task & Assignees' : 'New Task'}</Modal.Title>
                 </Modal.Header>
 
-                <Modal.Body>
+                <Modal.Body className="d-flex flex-column gap-3">
                     {validationError && (
-                        <Alert variant="danger" className="py-2">{validationError}</Alert>
+                        <Alert variant="danger" className="py-2 bg-danger bg-opacity-25 text-white border-danger border-opacity-40 rounded-3 mb-0 small fw-medium">
+                            {validationError}
+                        </Alert>
                     )}
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Title</Form.Label>
+                    <Form.Group>
+                        <Form.Label className="text-white fw-medium">Title</Form.Label>
                         <Form.Control
                             type="text"
                             name="title"
                             placeholder="e.g. Update user dashboard"
                             value={formData.title}
                             onChange={handleChange}
+                            required
                         />
                     </Form.Group>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Description</Form.Label>
+                    <Form.Group>
+                        <Form.Label className="text-white fw-medium">Description</Form.Label>
                         <Form.Control
                             as="textarea"
                             name="description"
                             rows={3}
+                            placeholder="Describe task scope and requirements..."
                             value={formData.description}
                             onChange={handleChange}
                         />
                     </Form.Group>
 
-                    <Form.Group className="mb-3">
-                        <Form.Label>Priority</Form.Label>
+                    <Form.Group>
+                        <Form.Label className="text-white fw-medium">Priority</Form.Label>
                         <Form.Select name="priority" value={formData.priority} onChange={handleChange}>
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
@@ -134,8 +149,8 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
                     </Form.Group>
 
                     {/* Deadline — integrated calendar */}
-                    <Form.Group className="mb-3">
-                        <Form.Label>Deadline</Form.Label>
+                    <Form.Group>
+                        <Form.Label className="text-white fw-medium">Deadline (Due Date)</Form.Label>
                         <DeadlineCalendar
                             value={formData.due_date}
                             onChange={(date) =>
@@ -144,37 +159,40 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
                         />
                     </Form.Group>
 
-                    {/* Assignees — required; admins and the current user are not shown */}
+                    {/* Assignees */}
                     <Form.Group className="mb-1">
-                        <Form.Label className="d-flex align-items-center justify-content-between">
+                        <Form.Label className="d-flex align-items-center justify-content-between text-white fw-medium">
                             <span>
-                                Assignees <span className="text-danger">*</span>
+                                Select Assignees <span className="text-danger">*</span>
                             </span>
-                            <Badge bg="secondary">{selectedCount} selected</Badge>
+                            <Badge bg="indigo" className="badge-indigo">{selectedCount} selected</Badge>
                         </Form.Label>
 
-                        {users.length === 0 ? (
+                        {activeUserList.length === 0 ? (
                             <p className="text-muted small mb-0">
-                                No assignable team members available.
+                                Loading team members...
                             </p>
                         ) : (
-                            <div className="tm-assignee-list">
-                                {users.map((user) => {
+                            <div className="tm-assignee-list glass-card p-2 rounded-3 border-secondary border-opacity-20" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                {activeUserList.map((user) => {
                                     const id = user.id.toString();
                                     const checked = formData.assignees.includes(id);
                                     return (
                                         <label
                                             key={user.id}
-                                            className={`tm-assignee-row ${checked ? 'is-selected' : ''}`}
+                                            className={`d-flex align-items-center gap-2 p-2 rounded-3 text-white cursor-pointer mb-1 ${checked ? 'bg-indigo bg-opacity-25 border border-indigo border-opacity-40' : 'hover-bg-secondary'}`}
+                                            style={{ cursor: 'pointer' }}
                                         >
                                             <Form.Check
                                                 type="checkbox"
                                                 checked={checked}
                                                 onChange={() => toggleAssignee(user.id)}
                                                 id={`assignee-${user.id}`}
+                                                className="mb-0"
                                             />
-                                            <span className="tm-assignee-name">{user.name}</span>
-                                            <Badge bg="secondary" className="ms-auto">
+                                            <span className="fw-semibold small">{user.name}</span>
+                                            <span className="text-muted small">({user.email})</span>
+                                            <Badge bg="secondary" className="ms-auto small">
                                                 {ROLE_LABEL[user.role] || user.role}
                                             </Badge>
                                         </label>
@@ -186,8 +204,8 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
                 </Modal.Body>
 
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button variant="primary" type="submit">Save Task</Button>
+                    <Button variant="outline-secondary" onClick={onClose} className="rounded-3">Cancel</Button>
+                    <Button className="gradient-btn rounded-3" type="submit">Save Task</Button>
                 </Modal.Footer>
             </Form>
         </Modal>

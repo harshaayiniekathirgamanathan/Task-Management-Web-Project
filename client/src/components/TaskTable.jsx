@@ -13,71 +13,65 @@ const TaskTable = ({ tasks = [], onEditTask, canEdit = true }) => {
         return 'secondary';
     };
 
-    const getInitials = (name) => {
-        if (!name) return 'U';
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-    };
-
     return (
-        <div className="glass-card p-3 border-0 shadow">
-            <Table responsive hover className="align-middle text-white mb-0">
+        <div className="glass-card p-3 border-0 shadow-lg">
+            <Table responsive hover variant="dark" className="align-middle mb-0 bg-transparent">
                 <thead>
-                    <tr className="text-muted border-bottom border-secondary border-opacity-20">
-                        <th>Title</th>
+                    <tr className="text-muted border-bottom border-secondary border-opacity-30">
+                        <th style={{ minWidth: '220px' }}>Task Title</th>
                         <th>Priority</th>
                         <th>Status</th>
                         <th>Due Date</th>
-                        <th>Assignees</th>
+                        <th>Assigned Team</th>
                         {canEdit && <th className="text-end">Actions</th>}
                     </tr>
                 </thead>
                 <tbody>
                     {tasks.length > 0 ? (
                         tasks.map(task => (
-                            <tr key={task.id} className="border-bottom border-secondary border-opacity-10">
-                                <td className="fw-semibold text-white">{task.title}</td>
+                            <tr key={task.id} className="border-bottom border-secondary border-opacity-20">
                                 <td>
-                                    <Badge bg={getPriorityVariant(task.priority)} className="px-2.5 py-1">
+                                    <div className="fw-bold text-white fs-6 mb-0">{task.title}</div>
+                                    {task.description && (
+                                        <div className="text-muted small text-truncate" style={{ maxWidth: '300px' }}>
+                                            {task.description}
+                                        </div>
+                                    )}
+                                </td>
+                                <td>
+                                    <Badge bg={getPriorityVariant(task.priority)} className="px-2.5 py-1 text-uppercase" style={{ fontSize: '0.7rem' }}>
                                         {task.priority}
                                     </Badge>
                                 </td>
                                 <td>
-                                    <Badge bg={getStatusVariant(task.status)} className="px-2.5 py-1">
+                                    <Badge bg={getStatusVariant(task.status)} className="px-2.5 py-1 text-uppercase" style={{ fontSize: '0.7rem' }}>
                                         {task.status?.replace('_', ' ')}
                                     </Badge>
                                 </td>
-                                <td className="text-muted small">
-                                    {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                                <td>
+                                    <span className="text-light small">
+                                        {task.due_date ? new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline'}
+                                    </span>
                                 </td>
                                 <td>
                                     {task.assignees && task.assignees.length > 0 ? (
-                                        <div className="d-flex align-items-center gap-1">
+                                        <div className="d-flex align-items-center gap-1 flex-wrap">
                                             {task.assignees.map(a => (
-                                                <div
-                                                    key={a.id}
-                                                    className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
-                                                    style={{
-                                                        width: '28px',
-                                                        height: '28px',
-                                                        background: 'var(--gradient-primary)',
-                                                        fontSize: '0.75rem'
-                                                    }}
-                                                    title={a.name}
-                                                >
-                                                    {getInitials(a.name)}
-                                                </div>
+                                                <Badge key={a.id} className="badge-indigo px-2 py-1 small fw-normal">
+                                                    👤 {a.name}
+                                                </Badge>
                                             ))}
                                         </div>
                                     ) : (
-                                        <span className="text-muted small opacity-50">Unassigned</span>
+                                        <span className="text-muted small opacity-60">Unassigned</span>
                                     )}
                                 </td>
                                 {canEdit && (
                                     <td className="text-end">
                                         <Button
-                                            variant="outline-info"
+                                            variant="outline-light"
                                             size="sm"
-                                            className="rounded-3 px-3 py-1 small"
+                                            className="rounded-3 px-3 py-1 small border-secondary border-opacity-40"
                                             onClick={() => onEditTask && onEditTask(task)}
                                         >
                                             ✏️ Edit & Assign
