@@ -24,8 +24,15 @@ const ProjectDetailPage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    // Sanitize ID in case spaces or malformed URL param was passed
-    const id = (rawId || '').trim().replace(/\s+/g, '-');
+    // Sanitize ID in case spaces or URL encoded spaces were in the address bar
+    const cleanId = (rawId || '').trim().replace(/%20/g, '-').replace(/\s+/g, '-');
+
+    // Auto-correct URL in address bar if spaces were present
+    useEffect(() => {
+        if (rawId && (rawId.includes(' ') || rawId.includes('%20'))) {
+            navigate(`/projects/${cleanId}`, { replace: true });
+        }
+    }, [rawId, cleanId, navigate]);
 
     const canCreateTask =
         user?.role === 'project_manager' || user?.role === 'admin';
@@ -55,7 +62,7 @@ const ProjectDetailPage = () => {
             setError('');
 
             const params = {
-                project_id: id
+                project_id: cleanId
             };
 
             if (filters.status) {
@@ -67,7 +74,8 @@ const ProjectDetailPage = () => {
             }
 
             const data = await listTasks(params);
-            setTasks(Array.isArray(data) ? data : (data?.tasks || data?.data || []));
+            const fetchedTasks = Array.isArray(data) ? data : (data?.tasks || data?.data || []);
+            setTasks(Array.isArray(fetchedTasks) ? fetchedTasks : []);
         } catch (err) {
             console.error('Failed to load tasks:', err);
             setTasks([]);
@@ -81,20 +89,27 @@ const ProjectDetailPage = () => {
     const loadUsers = async () => {
         try {
             const data = await listAssignableUsers();
-            setUsers(Array.isArray(data) ? data : data.data || []);
+            setUsers(Array.isArray(data) ? data : data?.data || []);
         } catch (err) {
             console.warn('Assignable users note:', err);
+            setUsers([]);
         }
     };
 
     const loadProject = async () => {
         try {
-            const data = await getProject(id);
-            setProject(data.data || data);
+            const data = await getProject(cleanId);
+            setProject(data?.data || data);
         } catch (err) {
             setProject({
-                id,
-                title: id.includes('1111') ? 'Website Redesign' : id.includes('2222') ? 'Mobile App MVP' : 'Project Workspace',
+                id: cleanId,
+                title: cleanId.includes('1111')
+                    ? 'Website Redesign'
+                    : cleanId.includes('2222')
+                    ? 'Mobile App MVP'
+                    : cleanId.includes('3333')
+                    ? 'API Gateway Integration'
+                    : 'Project Workspace',
                 description: 'Project workspace details and task management board.',
                 created_at: new Date().toISOString(),
                 creator_name: 'Harshaa',
@@ -106,17 +121,17 @@ const ProjectDetailPage = () => {
     };
 
     useEffect(() => {
-        if (id) {
+        if (cleanId) {
             loadTasks();
         }
-    }, [id, filters.status, filters.priority]);
+    }, [cleanId, filters.status, filters.priority]);
 
     useEffect(() => {
-        if (id) {
+        if (cleanId) {
             loadUsers();
             loadProject();
         }
-    }, [id]);
+    }, [cleanId]);
 
     const handleFilterChange = (name, value) => {
         setFilters(previousFilters => ({
@@ -144,7 +159,7 @@ const ProjectDetailPage = () => {
             } else {
                 await createTask({
                     ...payload,
-                    project_id: id
+                    project_id: cleanId
                 });
                 setSuccess('Task created successfully.');
             }
@@ -192,7 +207,7 @@ const ProjectDetailPage = () => {
                         <span>
                           Created by {project.creator_name || 'Harshaa'}
                           {' · '}
-                          {new Date(project.created_at).toLocaleDateString()}
+                          {new Date(project.created_at || Date.now()).toLocaleDateString()}
                         </span>
                         <span className="d-inline-flex align-items-center gap-2 ms-2">
                             <span className="tm-progress-track" style={{ width: '120px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', height: '8px' }}>
@@ -306,7 +321,7 @@ const ProjectDetailPage = () => {
             ) : view === 'board' ? (
                 <TaskBoard
                     tasks={tasks}
-                    projectId={id}
+                    projectId={cleanId}
                     onStatusChange={handleStatusChange}
                     onTaskUpdated={() => loadTasks(false)}
                     onEditTask={(taskToEdit) => {
