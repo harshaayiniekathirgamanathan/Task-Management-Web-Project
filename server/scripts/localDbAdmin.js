@@ -46,7 +46,7 @@ async function main() {
             await client.query(
               `INSERT INTO users (name, email, password_hash, role, is_active, must_reset_password)
                VALUES ($1, $2, $3, 'admin', true, false)`,
-              ['Admin User', adminEmail, passwordHash]
+              ['Harshaa', adminEmail, passwordHash]
             );
             console.log("User successfully created in local PostgreSQL!");
           }

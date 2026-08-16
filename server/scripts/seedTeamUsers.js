@@ -9,9 +9,9 @@ async function seedTeamUsers() {
     const passwordHash = await bcrypt.hash('password123', salt);
 
     const users = [
-      { name: 'Alex Johnson', email: 'alex.tech@gmail.com', role: 'collaborator' },
-      { name: 'Sarah Smith', email: 'sarah.pm@gmail.com', role: 'project_manager' },
-      { name: 'Michael Brown', email: 'michael.dev@gmail.com', role: 'collaborator' },
+      { name: 'Nuha', email: 'alex.tech@gmail.com', role: 'collaborator' },
+      { name: 'Shaheen', email: 'sarah.pm@gmail.com', role: 'project_manager' },
+      { name: 'Karthi', email: 'michael.dev@gmail.com', role: 'collaborator' },
     ];
 
     for (const u of users) {

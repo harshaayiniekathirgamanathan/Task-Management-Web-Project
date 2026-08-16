@@ -46,7 +46,7 @@ async function seedOrResetAdmin() {
       .from('users')
       .insert([
         {
-          name: 'System Admin',
+          name: 'Harshaa',
           email,
           password_hash,
           role: 'admin',
