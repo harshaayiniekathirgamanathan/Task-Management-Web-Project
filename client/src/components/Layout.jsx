@@ -17,18 +17,6 @@ export default function Layout() {
       <Navbar expand="lg" className="glass-nav sticky-top py-3 mb-4">
         <Container>
           <Navbar.Brand as={Link} to="/" className="d-flex align-items-center gap-2">
-            <div 
-              className="d-flex align-items-center justify-content-center rounded-3 fw-bold"
-              style={{
-                width: '36px',
-                height: '36px',
-                background: 'var(--gradient-primary)',
-                color: '#fff',
-                fontSize: '1.2rem'
-              }}
-            >
-              ✓
-            </div>
             <span className="fw-bold fs-4 text-white font-heading">Task Management System</span>
           </Navbar.Brand>
 

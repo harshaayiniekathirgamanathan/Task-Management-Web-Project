@@ -42,19 +42,6 @@ export default function LoginPage() {
       <Row className="w-100 justify-content-center">
         <Col md={8} lg={6} xl={4}>
           <div className="text-center mb-4">
-            <div 
-              className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3 shadow-lg"
-              style={{
-                width: '64px',
-                height: '64px',
-                background: 'var(--gradient-primary)',
-                color: '#fff',
-                fontSize: '1.75rem',
-                fontWeight: 'bold'
-              }}
-            >
-              ✓
-            </div>
             <h1 className="h2 fw-bold text-white mb-1">Task Management System</h1>
             <p className="text-muted small">Sign in to access your project management workspace</p>
           </div>
