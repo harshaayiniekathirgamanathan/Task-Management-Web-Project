@@ -166,8 +166,8 @@ const ProjectDetailPage = () => {
 
             setShowModal(false);
             setEditingTask(null);
-            loadTasks();
-            loadProject();
+            await loadTasks(false);
+            await loadProject();
         } catch (err) {
             console.error('Failed to save task:', err);
             setError(err.response?.data?.message || 'Could not save task.');
