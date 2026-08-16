@@ -10,6 +10,8 @@ const http = require('http');
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Routes
 const commentRoutes = require('./routes/commentRoutes');
@@ -62,6 +64,10 @@ app.get('/health', (req, res) => {
     status: 'ok',
   });
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Global Error Handler (must be registered after all other routes and middlewares)
 app.use(errorHandler);

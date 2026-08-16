@@ -102,6 +102,15 @@ CREATE TABLE task_labels (
   PRIMARY KEY (task_id, label_id)
 );
 
+-- ===== REFRESH TOKENS =====
+CREATE TABLE refresh_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ===== INDEXES (make foreign-key lookups fast) =====
 CREATE INDEX idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX idx_tasks_created_by ON tasks(created_by);
@@ -110,3 +119,26 @@ CREATE INDEX idx_comments_task_id ON comments(task_id);
 CREATE INDEX idx_attachments_task_id ON attachments(task_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_labels_project_id ON labels(project_id);
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+
+-- ===== AUTO-UPDATE updated_at TRIGGER =====
+-- Automatically keeps updated_at fresh on every UPDATE
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_projects_updated_at
+  BEFORE UPDATE ON projects
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_tasks_updated_at
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
