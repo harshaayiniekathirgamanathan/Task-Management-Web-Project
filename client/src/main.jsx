@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <SocketProvider>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 
 // Compact, dependency-free month calendar for picking a task deadline.
-// Works entirely in local time and emits a `YYYY-MM-DD` string (or '' when
-// cleared). Days before today are disabled so a deadline is never in the past.
+// Works entirely in local time and emits a `YYYY-MM-DD` string (or '' when cleared).
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = [
@@ -13,17 +12,19 @@ const MONTHS = [
 const pad = (n) => String(n).padStart(2, '0');
 const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-// Parse 'YYYY-MM-DD' into a local Date (avoids the UTC shift of new Date(str)).
+// Safely parse 'YYYY-MM-DD' or ISO strings (e.g., '2026-08-16T23:59:59') into a local Date
 const fromKey = (key) => {
     if (!key) return null;
-    const [y, m, d] = key.split('-').map(Number);
-    if (!y || !m || !d) return null;
+    const dateStr = String(key).split('T')[0];
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return null;
     return new Date(y, m - 1, d);
 };
 
 const DeadlineCalendar = ({ value, onChange }) => {
     const todayKey = toKey(new Date());
     const selected = fromKey(value);
+    const dateValueKey = selected ? toKey(selected) : '';
 
     // Which month the grid is showing — starts on the selected date or today.
     const [view, setView] = useState(() => {
@@ -76,7 +77,7 @@ const DeadlineCalendar = ({ value, onChange }) => {
                     const key = toKey(day);
                     const isPast = key < todayKey;
                     const isToday = key === todayKey;
-                    const isSelected = value === key;
+                    const isSelected = dateValueKey === key;
 
                     return (
                         <button
@@ -97,10 +98,10 @@ const DeadlineCalendar = ({ value, onChange }) => {
             </div>
 
             <div className="tm-cal-foot">
-                {value ? (
+                {selected ? (
                     <>
                         <span className="text-muted small">
-                            Due {fromKey(value).toLocaleDateString(undefined, {
+                            Due {selected.toLocaleDateString(undefined, {
                                 weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
                             })}
                         </span>
