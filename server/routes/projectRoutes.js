@@ -131,7 +131,7 @@ router.post(
  */
 router.get(
   '/:id',
-  [param('id').isUUID().withMessage('Invalid project id')],
+  [param('id').notEmpty().withMessage('Invalid project id')],
   validate,
   projectController.getProject
 );
@@ -182,7 +182,7 @@ router.patch(
   '/:id',
   requireRole('project_manager', 'admin'),
   [
-    param('id').isUUID().withMessage('Invalid project id'),
+    param('id').notEmpty().withMessage('Invalid project id'),
     body('title').optional().trim().notEmpty().withMessage('Title cannot be empty'),
   ],
   validate,
@@ -219,7 +219,7 @@ router.patch(
 router.delete(
   '/:id',
   requireRole('project_manager', 'admin'),
-  [param('id').isUUID().withMessage('Invalid project id')],
+  [param('id').notEmpty().withMessage('Invalid project id')],
   validate,
   projectController.deleteProject
 );

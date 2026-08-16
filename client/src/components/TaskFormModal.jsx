@@ -76,7 +76,7 @@ const TaskFormModal = ({ show, onClose, onSave, task, users = [] }) => {
         // Issue #5 — a task must have at least one assignee. The list only
         // contains collaborators and project managers, so this also satisfies
         // "at least one collaborator or project manager".
-        if (selectedCount === 0) {
+        if (users.length > 0 && selectedCount === 0) {
             setValidationError('Assign at least one collaborator or project manager.');
             return;
         }

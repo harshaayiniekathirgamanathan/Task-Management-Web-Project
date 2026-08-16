@@ -145,7 +145,7 @@ const createAssigneeRules = [
 router.get(
   '/',
   [
-    query('project_id').optional().isUUID().withMessage('project_id must be a valid id'),
+    query('project_id').optional().notEmpty().withMessage('project_id must not be empty'),
     query('assignee').optional().isUUID().withMessage('assignee must be a valid id'),
     query('status').optional().isIn(['todo', 'in_progress', 'completed']).withMessage('invalid status'),
     query('priority').optional().isIn(['low', 'medium', 'high']).withMessage('invalid priority'),

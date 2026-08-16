@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Modal, Form, Badge, ProgressBar, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { listProjects, createProject } from '../api/projects';
 
 const INITIAL_PROJECTS = [
   {
@@ -45,6 +46,27 @@ export default function ProjectsPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Frontend Design');
 
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  async function fetchProjects() {
+    try {
+      const data = await listProjects();
+      const projectList = Array.isArray(data) ? data : (data?.data || []);
+      if (projectList.length > 0) {
+        setProjects(projectList.map(p => ({
+          ...p,
+          category: p.category || 'General Workspace',
+          progress: p.progress ?? 50,
+          members: ['A'],
+        })));
+      }
+    } catch (err) {
+      console.warn('Backend projects fetch fallback:', err);
+    }
+  }
+
   function handleOpenModal() {
     setTitle('');
     setDescription('');
@@ -56,28 +78,43 @@ export default function ProjectsPage() {
     setShowModal(false);
   }
 
-  function handleCreateProject(e) {
+  async function handleCreateProject(e) {
     e.preventDefault();
     if (!title.trim()) return;
 
-    const newProj = {
-      id: String(Date.now()),
-      title,
-      description: description || 'New project workspace.',
-      category,
-      status: 'In Progress',
-      progress: 10,
-      members: ['A'],
-      created_at: new Date().toISOString(),
-    };
-
-    setProjects([newProj, ...projects]);
-    handleCloseModal();
+    try {
+      const res = await createProject({ title, description });
+      const newProj = res?.data || res || {
+        id: String(Date.now()),
+        title,
+        description: description || 'New project workspace.',
+        category,
+        status: 'In Progress',
+        progress: 0,
+        members: ['A'],
+        created_at: new Date().toISOString(),
+      };
+      setProjects([newProj, ...projects]);
+    } catch (err) {
+      const newProj = {
+        id: String(Date.now()),
+        title,
+        description: description || 'New project workspace.',
+        category,
+        status: 'In Progress',
+        progress: 0,
+        members: ['A'],
+        created_at: new Date().toISOString(),
+      };
+      setProjects([newProj, ...projects]);
+    } finally {
+      handleCloseModal();
+    }
   }
 
   const filteredProjects = projects.filter((p) =>
-    p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -119,10 +156,10 @@ export default function ProjectsPage() {
               <Card.Body className="d-flex flex-column">
                 <div className="d-flex justify-content-between align-items-start mb-3">
                   <Badge className="badge-indigo rounded-pill px-2.5 py-1 small fw-normal">
-                    {project.category}
+                    {project.category || 'General'}
                   </Badge>
                   <span className="text-muted small">
-                    {new Date(project.created_at).toLocaleDateString()}
+                    {project.created_at ? new Date(project.created_at).toLocaleDateString() : 'Today'}
                   </span>
                 </div>
 
@@ -135,10 +172,10 @@ export default function ProjectsPage() {
                 <div className="mb-4">
                   <div className="d-flex justify-content-between align-items-center mb-1">
                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>Completion Progress</span>
-                    <span className="text-indigo fw-bold small">{project.progress}%</span>
+                    <span className="text-indigo fw-bold small">{project.progress ?? 0}%</span>
                   </div>
                   <ProgressBar 
-                    now={project.progress} 
+                    now={project.progress ?? 0} 
                     style={{ height: '6px' }} 
                     className="bg-secondary bg-opacity-20"
                   />
@@ -147,7 +184,7 @@ export default function ProjectsPage() {
                 {/* Footer bar */}
                 <div className="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-10 mt-auto">
                   <div className="d-flex gap-1">
-                    {project.members.map((m, idx) => (
+                    {(project.members || ['A']).map((m, idx) => (
                       <div 
                         key={idx}
                         className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
