@@ -39,7 +39,7 @@ const listUsers = async ({ search, role, active }) => {
 const listAssignableUsers = async ({ excludeUserId } = {}) => {
     const params = [];
     let sql =
-        "SELECT id, name, email, role FROM users WHERE is_active = true AND role <> 'admin'";
+        "SELECT id, name, email, role FROM users WHERE is_active = true";
 
     if (excludeUserId) {
         params.push(excludeUserId);

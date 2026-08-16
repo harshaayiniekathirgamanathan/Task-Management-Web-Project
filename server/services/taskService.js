@@ -75,11 +75,6 @@ async function assertUsersExist(uniqueIds) {
     err.status = 400;
     throw err;
   }
-  if (users.some((u) => u.role === 'admin')) {
-    const err = new Error('Admins cannot be assigned to tasks');
-    err.status = 400;
-    throw err;
-  }
 }
 
 // List tasks with optional filters and sorting.

@@ -293,9 +293,20 @@ const ProjectDetailPage = () => {
                     projectId={id}
                     onStatusChange={handleStatusChange}
                     onTaskUpdated={() => loadTasks(false)}
+                    onEditTask={(taskToEdit) => {
+                        setEditingTask(taskToEdit);
+                        setShowModal(true);
+                    }}
                 />
             ) : (
-                <TaskTable tasks={tasks} />
+                <TaskTable
+                    tasks={tasks}
+                    canEdit={canCreateTask}
+                    onEditTask={(taskToEdit) => {
+                        setEditingTask(taskToEdit);
+                        setShowModal(true);
+                    }}
+                />
             )}
 
             <TaskFormModal
