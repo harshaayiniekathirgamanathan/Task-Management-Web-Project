@@ -11,7 +11,7 @@ const INITIAL_PROJECTS = [
     category: 'Frontend Design',
     status: 'In Progress',
     progress: 75,
-    members: ['A', 'M', 'R'],
+    members: ['H', 'N', 'S'],
     created_at: '2026-01-15T08:00:00Z',
   },
   {
@@ -21,7 +21,7 @@ const INITIAL_PROJECTS = [
     category: 'Mobile Platform',
     status: 'Planning',
     progress: 40,
-    members: ['A', 'K'],
+    members: ['H', 'K'],
     created_at: '2026-02-20T10:00:00Z',
   },
   {
@@ -31,7 +31,7 @@ const INITIAL_PROJECTS = [
     category: 'Backend Architecture',
     status: 'Near Complete',
     progress: 90,
-    members: ['A', 'S', 'D'],
+    members: ['H', 'S', 'K'],
     created_at: '2026-03-05T09:30:00Z',
   },
 ];
@@ -58,8 +58,8 @@ export default function ProjectsPage() {
         setProjects(projectList.map(p => ({
           ...p,
           category: p.category || 'General Workspace',
-          progress: p.progress ?? 50,
-          members: ['A'],
+          progress: p.progress ?? 0,
+          members: ['H', 'N', 'S', 'K'],
         })));
       }
     } catch (err) {
@@ -91,10 +91,11 @@ export default function ProjectsPage() {
         category,
         status: 'In Progress',
         progress: 0,
-        members: ['A'],
+        members: ['H'],
         created_at: new Date().toISOString(),
       };
-      setProjects([newProj, ...projects]);
+      fetchProjects();
+      setProjects((prev) => [newProj, ...prev]);
     } catch (err) {
       const newProj = {
         id: crypto.randomUUID(),
@@ -103,10 +104,10 @@ export default function ProjectsPage() {
         category,
         status: 'In Progress',
         progress: 0,
-        members: ['A'],
+        members: ['H'],
         created_at: new Date().toISOString(),
       };
-      setProjects([newProj, ...projects]);
+      setProjects((prev) => [newProj, ...prev]);
     } finally {
       handleCloseModal();
     }
@@ -152,11 +153,15 @@ export default function ProjectsPage() {
       <Row className="g-4">
         {filteredProjects.map((project) => (
           <Col key={project.id} xs={12} md={6} lg={4}>
-            <Card className="glass-card h-100 p-2 border-0 d-flex flex-column">
+            <Card 
+              className="glass-card h-100 p-2 border-0 d-flex flex-column hover-lift"
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate(`/projects/${project.id}`)}
+            >
               <Card.Body className="d-flex flex-column">
                 <div className="d-flex justify-content-between align-items-start mb-3">
                   <Badge className="badge-indigo rounded-pill px-2.5 py-1 small fw-normal">
-                    {project.category || 'General'}
+                    {project.category || 'General Workspace'}
                   </Badge>
                   <span className="text-muted small">
                     {project.created_at ? new Date(project.created_at).toLocaleDateString() : 'Today'}
@@ -184,10 +189,10 @@ export default function ProjectsPage() {
                 {/* Footer bar */}
                 <div className="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-10 mt-auto">
                   <div className="d-flex gap-1">
-                    {(project.members || ['A']).map((m, idx) => (
+                    {(project.members || ['H', 'N', 'S', 'K']).slice(0, 4).map((m, idx) => (
                       <div 
                         key={idx}
-                        className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                        className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
                         style={{
                           width: '28px',
                           height: '28px',
@@ -204,7 +209,10 @@ export default function ProjectsPage() {
                     variant="outline-light"
                     size="sm"
                     className="rounded-3 px-3 py-1 border-secondary border-opacity-30 small"
-                    onClick={() => navigate(`/projects/${project.id}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/projects/${project.id}`);
+                    }}
                   >
                     Open Workspace →
                   </Button>
