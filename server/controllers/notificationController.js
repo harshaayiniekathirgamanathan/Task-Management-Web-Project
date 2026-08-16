@@ -25,7 +25,7 @@ async function markAsRead(req, res, next) {
     const { data, error } = await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('id', req.params.id)
+      .eq('id', req.params.notificationId)
       .eq('user_id', req.user.id)
       .select()
       .single();
