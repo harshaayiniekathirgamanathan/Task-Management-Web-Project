@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
     Alert,
     Button,
@@ -20,8 +20,12 @@ import TaskTable from '../components/TaskTable';
 import TaskFormModal from '../components/TaskFormModal';
 
 const ProjectDetailPage = () => {
-    const { id } = useParams();
+    const { id: rawId } = useParams();
+    const navigate = useNavigate();
     const { user } = useAuth();
+
+    // Sanitize ID in case spaces or malformed URL param was passed
+    const id = (rawId || '').trim().replace(/\s+/g, '-');
 
     const canCreateTask =
         user?.role === 'project_manager' || user?.role === 'admin';
@@ -90,24 +94,28 @@ const ProjectDetailPage = () => {
         } catch (err) {
             setProject({
                 id,
-                title: id === '1' ? 'Website Redesign' : id === '2' ? 'Mobile App MVP' : 'Project Workspace',
+                title: id.includes('1111') ? 'Website Redesign' : id.includes('2222') ? 'Mobile App MVP' : 'Project Workspace',
                 description: 'Project workspace details and task management board.',
                 created_at: new Date().toISOString(),
-                creator_name: 'System Admin',
-                progress: 60,
-                completed_tasks: 3,
-                total_tasks: 5
+                creator_name: 'Harshaa',
+                progress: 0,
+                completed_tasks: 0,
+                total_tasks: 0
             });
         }
     };
 
     useEffect(() => {
-        loadTasks();
+        if (id) {
+            loadTasks();
+        }
     }, [id, filters.status, filters.priority]);
 
     useEffect(() => {
-        loadUsers();
-        loadProject();
+        if (id) {
+            loadUsers();
+            loadProject();
+        }
     }, [id]);
 
     const handleFilterChange = (name, value) => {
@@ -134,7 +142,7 @@ const ProjectDetailPage = () => {
                 await updateTask(editingTask.id, payload);
                 setSuccess('Task updated successfully.');
             } else {
-                const created = await createTask({
+                await createTask({
                     ...payload,
                     project_id: id
                 });
@@ -170,11 +178,19 @@ const ProjectDetailPage = () => {
     return (
         <Container className="mt-4">
             <div className="mb-4">
+                <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="rounded-3 px-3 py-1 mb-3 text-white border-secondary border-opacity-30"
+                    onClick={() => navigate('/projects')}
+                >
+                    ← Back to Projects
+                </Button>
                 <h2 className="mb-1 text-white fw-bold">{project?.title || 'Project Workspace'}</h2>
                 {project && (
                     <div className="text-muted small d-flex flex-wrap align-items-center gap-2 mt-2">
                         <span>
-                          Created by {project.creator_name || 'System Admin'}
+                          Created by {project.creator_name || 'Harshaa'}
                           {' · '}
                           {new Date(project.created_at).toLocaleDateString()}
                         </span>
