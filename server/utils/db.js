@@ -17,10 +17,7 @@ let pool = null;
 function getPool() {
   if (pool) return pool;
 
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error('Missing DATABASE_URL in your environment');
-  }
+  const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:root@localhost:5432/task_management';
 
   // Azure Database for PostgreSQL requires TLS. We don't ship the Azure CA
   // bundle, so verification is relaxed (the connection is still encrypted).

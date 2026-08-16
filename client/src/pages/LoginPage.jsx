@@ -66,7 +66,7 @@ export default function LoginPage() {
                   variant="danger" 
                   onClose={() => setError('')} 
                   dismissible 
-                  className="bg-danger bg-opacity-20 text-danger border-danger border-opacity-30 rounded-3 mb-4 small"
+                  className="bg-danger bg-opacity-25 text-white border-danger border-opacity-40 rounded-3 mb-4 small fw-medium"
                 >
                   {error}
                 </Alert>
