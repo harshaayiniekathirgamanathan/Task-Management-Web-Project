@@ -28,6 +28,7 @@ const getInitials = (name) => {
 const TaskCard = ({
     task,
     onOpen,
+    onEditTask,
     isOverlay = false,
     canManageLabels = false,
     projectId,
