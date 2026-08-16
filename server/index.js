@@ -10,10 +10,16 @@ const http = require('http');
 const { initSocket } = require('./sockets/io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+
+// Core Auth & Users Routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 
-// Routes
+// Projects & Tasks Routes
+const projectRoutes = require('./routes/projectRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+
+// Comments, Labels, Attachments & Notifications Routes
 const commentRoutes = require('./routes/commentRoutes');
 const labelRoutes = require('./routes/labelRoutes');
 const attachmentRoutes = require('./routes/attachmentRoutes');
@@ -37,7 +43,7 @@ app.use(helmet());
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
   })
 );
@@ -49,6 +55,10 @@ app.use(express.json());
 app.use(cookieParser());
 
 // API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', labelRoutes);
 app.use('/api', attachmentRoutes);
@@ -69,10 +79,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-
 // Global Error Handler (must be registered after all other routes and middlewares)
 app.use(errorHandler);
 
@@ -80,7 +86,7 @@ app.use(errorHandler);
 const server = http.createServer(app);
 
 // Initialize Socket.IO
-initSocket(server);
+app.set('io', initSocket(server));
 
 // Start cron job for deadline reminders
 startDeadlineReminderJob();
