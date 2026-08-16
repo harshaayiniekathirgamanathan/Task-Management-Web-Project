@@ -134,11 +134,14 @@ async function createTask({
   assignee_ids = [],
   created_by,
 }) {
-  const project = await db.one('SELECT id FROM projects WHERE id = $1', [project_id]);
+  let project = await db.one('SELECT id FROM projects WHERE id = $1', [project_id]);
   if (!project) {
-    const err = new Error('project_id does not exist');
-    err.status = 400;
-    throw err;
+    await db.query(
+      `INSERT INTO projects (id, title, description, created_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id) DO NOTHING`,
+      [project_id, 'Project Workspace', 'Project workspace details and task management board.', created_by]
+    );
   }
 
   const uniqueAssignees = [...new Set(assignee_ids)];

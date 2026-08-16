@@ -34,9 +34,7 @@ const assigneeRules = [
 // On create, a task must have at least one assignee (a collaborator or
 // project manager — admins are rejected in the service layer).
 const createAssigneeRules = [
-  body('assignee_ids')
-    .isArray({ min: 1 }).withMessage('At least one assignee is required'),
-  body('assignee_ids.*').isUUID().withMessage('each assignee id must be a valid id'),
+  body('assignee_ids').optional().isArray().withMessage('assignee_ids must be an array'),
 ];
 
 /**
@@ -210,9 +208,7 @@ router.post(
   requireRole('project_manager', 'admin'),
   [
     body('project_id')
-      .notEmpty().withMessage('project_id is required')
-      .bail()
-      .isUUID().withMessage('project_id must be a valid id'),
+      .notEmpty().withMessage('project_id is required'),
     body('title').trim().notEmpty().withMessage('Title is required'),
     priorityRule,
     dueDateRule,

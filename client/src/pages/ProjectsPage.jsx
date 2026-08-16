@@ -5,7 +5,7 @@ import { listProjects, createProject } from '../api/projects';
 
 const INITIAL_PROJECTS = [
   {
-    id: '1',
+    id: '11111111-1111-4111-a111-111111111111',
     title: 'Website Redesign',
     description: 'Redesign the company website with modern typography, glassmorphism UI, and dark mode theme.',
     category: 'Frontend Design',
@@ -15,7 +15,7 @@ const INITIAL_PROJECTS = [
     created_at: '2026-01-15T08:00:00Z',
   },
   {
-    id: '2',
+    id: '22222222-2222-4222-a222-222222222222',
     title: 'Mobile App MVP',
     description: 'Build the first version of the iOS and Android application with real-time push notifications.',
     category: 'Mobile Platform',
@@ -25,7 +25,7 @@ const INITIAL_PROJECTS = [
     created_at: '2026-02-20T10:00:00Z',
   },
   {
-    id: '3',
+    id: '33333333-3333-4333-a333-333333333333',
     title: 'API Gateway Integration',
     description: 'Connect frontend dashboard to microservice backend with JWT authentication and PostgreSQL.',
     category: 'Backend Architecture',
@@ -85,7 +85,7 @@ export default function ProjectsPage() {
     try {
       const res = await createProject({ title, description });
       const newProj = res?.data || res || {
-        id: String(Date.now()),
+        id: crypto.randomUUID(),
         title,
         description: description || 'New project workspace.',
         category,
@@ -97,7 +97,7 @@ export default function ProjectsPage() {
       setProjects([newProj, ...projects]);
     } catch (err) {
       const newProj = {
-        id: String(Date.now()),
+        id: crypto.randomUUID(),
         title,
         description: description || 'New project workspace.',
         category,
