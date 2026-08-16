@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
                   <Form.Label>Email Address</Form.Label>
                   <Form.Control
                     type="email"
-                    placeholder="admin@example.com"
+                    placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -110,11 +110,6 @@ export default function LoginPage() {
                   )}
                 </Button>
               </Form>
-
-              <div className="mt-4 pt-3 text-center border-top border-secondary border-opacity-20">
-                <span className="text-muted small">Default Dev Account: </span>
-                <code className="bg-dark text-info px-2 py-1 rounded small">admin@example.com</code>
-              </div>
             </Card.Body>
           </Card>
         </Col>
