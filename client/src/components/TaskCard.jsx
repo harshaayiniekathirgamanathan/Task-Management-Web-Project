@@ -86,9 +86,25 @@ const TaskCard = ({
             onClick={isOverlay ? undefined : () => onOpen?.(task)}
         >
             <Card.Body>
-                {/* Top Row: Title and Priority Badge */}
+                {/* Top Row: Title, Edit Button and Priority Badge */}
                 <div className="d-flex justify-content-between align-items-start mb-2">
-                    <Card.Title className="h6 mb-0">{task.title}</Card.Title>
+                    <div className="d-flex align-items-center gap-1">
+                        <Card.Title className="h6 mb-0 text-white fw-bold">{task.title}</Card.Title>
+                        {!isOverlay && onEditTask && (
+                            <button
+                                type="button"
+                                className="btn btn-sm text-info p-0 ms-1 border-0 shadow-none"
+                                title="Edit Task, Deadline & Assignees"
+                                onPointerDown={swallow}
+                                onClick={(e) => {
+                                    swallow(e);
+                                    onEditTask(task);
+                                }}
+                            >
+                                ✏️
+                            </button>
+                        )}
+                    </div>
                     <span className={priorityClass(task.priority)}>
                         {task.priority || 'None'}
                     </span>

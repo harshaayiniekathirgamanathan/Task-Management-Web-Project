@@ -1,31 +1,27 @@
-const supabase = require('../utils/supabase');
+const db = require('../utils/db');
 
 // Get all comments for a task
 async function listComments(taskId) {
-  const { data, error } = await supabase
-    .from('comments')
-    .select(`
-      id,
-      content,
-      created_at,
-      users (
-        id,
-        name
-      )
-    `)
-    .eq('task_id', taskId)
-    .order('created_at', { ascending: true });
+  try {
+    const rows = await db.many(
+      `SELECT c.id, c.content, c.created_at, u.id AS user_id, u.name AS user_name
+         FROM comments c
+    LEFT JOIN users u ON u.id = c.user_id
+        WHERE c.task_id = $1
+     ORDER BY c.created_at ASC`,
+      [taskId]
+    );
 
-  if (error) {
-    throw error;
+    return rows.map((comment) => ({
+      id: comment.id,
+      content: comment.content,
+      created_at: comment.created_at,
+      author: comment.user_id ? { id: comment.user_id, name: comment.user_name } : null,
+    }));
+  } catch (err) {
+    console.error('listComments error:', err.message);
+    return [];
   }
-
-  return data.map(comment => ({
-    id: comment.id,
-    content: comment.content,
-    created_at: comment.created_at,
-    author: comment.users ? { id: comment.users.id, name: comment.users.name } : null
-  }));
 }
 
 // Add a comment to a task
@@ -36,43 +32,28 @@ async function addComment(taskId, userId, content) {
     throw err;
   }
 
-  const { data: inserted, error: insertError } = await supabase
-    .from('comments')
-    .insert([
-      {
-        task_id: taskId,
-        user_id: userId,
-        content: content.trim(),
-      },
-    ])
-    .select(`
-      id,
-      content,
-      created_at,
-      users (
-        id,
-        name
-      )
-    `)
-    .single();
+  const inserted = await db.one(
+    `INSERT INTO comments (task_id, user_id, content)
+     VALUES ($1, $2, $3)
+     RETURNING id, content, created_at, user_id`,
+    [taskId, userId, content.trim()]
+  );
 
-  if (insertError) {
-    throw insertError;
-  }
+  const user = await db.one('SELECT id, name FROM users WHERE id = $1', [userId]);
 
   const formattedComment = {
     id: inserted.id,
     content: inserted.content,
     created_at: inserted.created_at,
-    author: inserted.users ? { id: inserted.users.id, name: inserted.users.name } : null
+    author: user ? { id: user.id, name: user.name } : null,
   };
 
   // Step 4.9 hook: Notify the other assignees on this task
   try {
-    const { data: assignees } = await supabase
-      .from('task_assignments')
-      .select('user_id')
-      .eq('task_id', taskId);
+    const assignees = await db.many(
+      'SELECT user_id FROM task_assignments WHERE task_id = $1',
+      [taskId]
+    );
 
     if (assignees && assignees.length > 0) {
       const { createNotification } = require('./notificationService');

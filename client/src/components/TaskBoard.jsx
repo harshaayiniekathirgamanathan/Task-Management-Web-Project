@@ -61,7 +61,7 @@ function DraggableCard({ task, canDrag, ...cardProps }) {
     );
 }
 
-const TaskBoard = ({ tasks = [], projectId, onStatusChange, onTaskUpdated }) => {
+const TaskBoard = ({ tasks = [], projectId, onStatusChange, onTaskUpdated, onEditTask }) => {
     const { user } = useAuth();
     const isManager = user?.role === 'project_manager' || user?.role === 'admin';
 
@@ -143,6 +143,7 @@ const TaskBoard = ({ tasks = [], projectId, onStatusChange, onTaskUpdated }) => 
                                             task={task}
                                             canDrag={canDragTask(task)}
                                             onOpen={handleOpenTask}
+                                            onEditTask={onEditTask}
                                             canManageLabels={isManager}
                                             projectId={projectId}
                                             onLabelAdded={() => onTaskUpdated?.()}
@@ -175,6 +176,7 @@ const TaskBoard = ({ tasks = [], projectId, onStatusChange, onTaskUpdated }) => 
                         : false
                 }
                 onTaskUpdated={onTaskUpdated}
+                onEditTask={onEditTask}
                 onClose={() => setSelectedTask(null)}
             />
         </>

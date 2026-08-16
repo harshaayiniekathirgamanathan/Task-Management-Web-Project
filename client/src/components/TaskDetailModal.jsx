@@ -22,6 +22,7 @@ const TaskDetailModal = ({
     task,
     projectId,
     onTaskUpdated,
+    onEditTask,
     canEdit = false,
     canManageLabels = false,
 }) => {
@@ -182,9 +183,24 @@ const TaskDetailModal = ({
     if (!task) return null;
 
     return (
-        <Modal show={show} onHide={onClose} size="lg">
+        <Modal show={show} onHide={onClose} size="lg" className="dark-modal">
             <Modal.Header closeButton>
-                <Modal.Title>{task.title}</Modal.Title>
+                <div className="d-flex align-items-center justify-content-between w-100 me-3">
+                    <Modal.Title className="text-white fw-bold">{task.title}</Modal.Title>
+                    {onEditTask && (
+                        <Button
+                            variant="outline-info"
+                            size="sm"
+                            className="rounded-3 px-3 py-1 small"
+                            onClick={() => {
+                                onClose();
+                                onEditTask(task);
+                            }}
+                        >
+                            ✏️ Edit Task, Deadline & Assignees
+                        </Button>
+                    )}
+                </div>
             </Modal.Header>
 
             <Modal.Body>
